@@ -59,6 +59,16 @@ public class SSLStream {
         _sendBufferDst = ByteBuffer.allocate(session.getPacketBufferSize());
         _recvBufferDst = ByteBuffer.allocate(session.getPacketBufferSize());
 
+        // TLS1.2 handshake: (doesn't include TCP handshake)
+        //
+        // Send     ClientHello  153  bytes
+        // Receive  ServerHello  5    bytes
+        // Receive  Certificate  1248 bytes
+        // Send     ...          158  bytes
+        // Receive  ...          5    bytes
+        // Receive  ...          1    bytes
+        // Receive  ...          5    bytes
+        // Receive  ...          40   bytes
         _sslEngine.beginHandshake();
         SSLEngineResult wrapResult = _sslEngine.wrap(_sendBufferSrc, _sendBufferDst);
 
