@@ -1,110 +1,218 @@
 package com.sslstream.javaclient;
 
-import android.util.Log;
+import javax.net.ssl.*;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLEngineResult;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 
-public class SSLStream {
+public final class SSLStream {
+    private SSLEngine sslEngine;
+    private ByteBuffer appOutBuffer;
+    private ByteBuffer netOutBuffer;
+    private ByteBuffer netInBuffer;
+    private ByteBuffer appInBuffer;
+    private OutputStream outputStream;
+    private InputStream inputStream;
 
-    private SSLEngine _sslEngine;
-    private ByteBuffer _sendBufferSrc = null;
-    private ByteBuffer _sendBufferDst = null;
-    private ByteBuffer _recvBufferSrc = null;
-    private ByteBuffer _recvBufferDst = null;
-    private OutputStream _outputStream;
-    private InputStream _inputStream;
-
-    public SSLStream(OutputStream outputStream, InputStream inputStream) {
-        _outputStream = outputStream;
-        _inputStream = inputStream;
+    public SSLStream(OutputStream outputStream, InputStream inputStream)
+    {
+        this.outputStream = outputStream;
+        this.inputStream = inputStream;
     }
 
-    public void AuthenticateAsClient(String targetHost) throws NoSuchAlgorithmException, KeyManagementException, IOException {
-        SSLContext sslContext = null;
+    public void AuthenticateAsClient(int appOutBufferSize, int appInBufferSize)
+            throws IOException, NoSuchAlgorithmException, KeyManagementException {
 
-        // EGOR: my server cert has to pass client validations so trust all of them
-        TrustManager trustAllCerts = new X509TrustManager() {
-            public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+
+        TrustManager trustAllCerts = new X509TrustManager()
+        {
+            public java.security.cert.X509Certificate[] getAcceptedIssuers()
+            {
                 return new X509Certificate[0];
             }
-
-            public void checkClientTrusted(X509Certificate[] certs, String authType) {
+            public void checkClientTrusted(X509Certificate[] certs, String authType)
+            {
             }
-
-            public void checkServerTrusted(X509Certificate[] certs, String authType) {
+            public void checkServerTrusted(X509Certificate[] certs, String authType)
+            {
             }
         };
 
-        sslContext = SSLContext.getInstance("TLSv1.2");
+        SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
         sslContext.init(null, new TrustManager[]{trustAllCerts}, null);
 
-        _sslEngine = sslContext.createSSLEngine();
-        _sslEngine.setUseClientMode(true);
-
-        SSLSession session = _sslEngine.getSession();
-
-        _sendBufferSrc = ByteBuffer.allocate(session.getPacketBufferSize());
-        _recvBufferSrc = ByteBuffer.allocate(session.getPacketBufferSize());
-        _sendBufferDst = ByteBuffer.allocate(session.getPacketBufferSize());
-        _recvBufferDst = ByteBuffer.allocate(session.getPacketBufferSize());
-
-        // TLS1.2 handshake: (doesn't include TCP handshake)
-        //
-        // Send     ClientHello  153  bytes
-        // Receive  ServerHello  5    bytes
-        // Receive  Certificate  1248 bytes
-        // Send     ...          158  bytes
-        // Receive  ...          5    bytes
-        // Receive  ...          1    bytes
-        // Receive  ...          5    bytes
-        // Receive  ...          40   bytes
-        _sslEngine.beginHandshake();
-        SSLEngineResult wrapResult = _sslEngine.wrap(_sendBufferSrc, _sendBufferDst);
-
-        writeBuffer(_sendBufferDst, _outputStream);
-
-        byte[] data = new byte[2048];
-        int read = _inputStream.read(data);
-        // ok so now "data" contains "serverHello" + "certificate"!
-        SSLEngineResult unwrapResult = _sslEngine.unwrap(ByteBuffer.wrap(data, 0, read), _recvBufferDst);
-
-        // at this point SSLEngine should process that certificate and validate it.
-
-        // TODO: finish the hand-shake here (1 write, 1 read);
-
-        // Now we should be able to send any data to/from the server
-        Log.i("EGOR", "handshake finished");
-
+        this.sslEngine = sslContext.createSSLEngine();
+        this.sslEngine.setUseClientMode(true);
+        SSLSession sslSession = sslEngine.getSession();
+        final int applicationBufferSize = sslSession.getApplicationBufferSize();
+        final int packetBufferSize = sslSession.getPacketBufferSize();
+        this.appOutBuffer = ByteBuffer.allocate(appOutBufferSize);
+        this.netOutBuffer = ByteBuffer.allocate(packetBufferSize);
+        this.netInBuffer = ByteBuffer.allocate(packetBufferSize);
+        this.appInBuffer = ByteBuffer.allocate(Math.max(applicationBufferSize, appInBufferSize));
+        sslEngine.beginHandshake();
+        checkHandshakeStatus();
     }
 
-    public void writeBuffer(ByteBuffer buffer, OutputStream stream) {
-        int pos = buffer.position();
-        buffer.rewind();
-        byte[] byteArray = new byte[pos];
-        buffer.get(byteArray, 0, pos);
-        try {
-            stream.write(byteArray, 0, pos);
-            stream.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
+    public void send(byte[] message) throws IOException {
+        appOutBuffer.put(message);
+        doWrap();
+    }
+
+    public byte[] receive() throws IOException {
+        while (true) {
+            appInBuffer.flip();
+            try {
+                if (appInBuffer.remaining() > 0) {
+                    byte[] data = new byte[appInBuffer.remaining()];
+                    appInBuffer.get(data);
+                    return data;
+                }
+            } finally {
+                appInBuffer.compact();
+            }
+            doUnwrap();
         }
     }
 
-    public void Write(byte[] data, int offset, int count) {
+    private void checkHandshakeStatus() throws IOException {
+        checkHandshakeStatus(sslEngine.getHandshakeStatus());
     }
 
-    public int Read(byte[] data) {
-        return 0;
+    private void checkHandshakeStatus(SSLEngineResult.HandshakeStatus handshakeStatus) throws IOException {
+        switch (handshakeStatus) {
+            case NOT_HANDSHAKING:
+                return;
+            case FINISHED:
+                return;
+            case NEED_WRAP:
+                doWrap();
+                break;
+            case NEED_UNWRAP:
+                doUnwrap();
+                break;
+            case NEED_TASK:
+                Runnable task;
+                while ((task = sslEngine.getDelegatedTask()) != null) task.run();
+                checkHandshakeStatus();
+                break;
+        }
+    }
+
+    private void doWrap() throws IOException {
+        appOutBuffer.flip();
+        final SSLEngineResult result;
+        try {
+            result = sslEngine.wrap(appOutBuffer, netOutBuffer);
+        } catch (SSLException e) {
+            return;
+        }
+        appOutBuffer.compact();
+
+        final SSLEngineResult.Status status = result.getStatus();
+        switch (status) {
+            case OK:
+                flush();
+                checkHandshakeStatus(result.getHandshakeStatus());
+                if (appOutBuffer.position() > 0) doWrap();
+                break;
+            case CLOSED:
+                flush();
+                checkHandshakeStatus(result.getHandshakeStatus());
+                close();
+                break;
+            case BUFFER_OVERFLOW:
+                netOutBuffer = ensureRemaining(netOutBuffer, sslEngine.getSession().getPacketBufferSize());
+                doWrap();
+                break;
+        }
+    }
+
+    private void flush() throws IOException {
+        netOutBuffer.flip();
+        try {
+            while (netOutBuffer.hasRemaining()) {
+                WritableByteChannel channel = Channels.newChannel(outputStream);
+                channel.write(netOutBuffer);
+            }
+        } finally {
+            netOutBuffer.compact();
+        }
+    }
+
+    private void doUnwrap() throws IOException {
+        if (netInBuffer.position() == 0) {
+            ReadableByteChannel channel = Channels.newChannel(inputStream);
+            int count = channel.read(netInBuffer);
+            if (count == -1) {
+                handleEndOfStream();
+                return;
+            }
+        }
+
+        netInBuffer.flip();
+        final SSLEngineResult result;
+        try {
+            result = sslEngine.unwrap(netInBuffer, appInBuffer);
+        } catch (SSLException e) {
+            return;
+        }
+        netInBuffer.compact();
+        final SSLEngineResult.Status status = result.getStatus();
+        switch (status) {
+            case OK:
+                checkHandshakeStatus(result.getHandshakeStatus());
+                break;
+            case CLOSED:
+                checkHandshakeStatus(result.getHandshakeStatus());
+                close();
+                break;
+            case BUFFER_UNDERFLOW:
+                netInBuffer = ensureRemaining(netInBuffer, sslEngine.getSession().getPacketBufferSize());
+                ReadableByteChannel channel = Channels.newChannel(inputStream);
+                int count = channel.read(netInBuffer);
+                channel.close();
+                if (count == -1) {
+                    handleEndOfStream();
+                    return;
+                }
+                doUnwrap();
+                break;
+            case BUFFER_OVERFLOW:
+                appInBuffer = ensureRemaining(appInBuffer, sslEngine.getSession().getApplicationBufferSize());
+                doUnwrap();
+                break;
+        }
+    }
+
+    private void handleEndOfStream() throws IOException {
+        try {
+            sslEngine.closeInbound();
+            close();
+        } catch (SSLException e) {
+        }
+    }
+
+    private ByteBuffer ensureRemaining(ByteBuffer oldBuffer, int newRemaining) {
+        if (oldBuffer.remaining() < newRemaining) {
+            oldBuffer.flip();
+            final ByteBuffer newBuffer = ByteBuffer.allocate(oldBuffer.remaining() + newRemaining);
+            newBuffer.put(oldBuffer);
+            return newBuffer;
+        } else {
+            return oldBuffer;
+        }
+    }
+
+    public void close() throws IOException {
+        sslEngine.closeOutbound();
+        checkHandshakeStatus();
     }
 }

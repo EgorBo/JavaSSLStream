@@ -62,7 +62,7 @@ public sealed class SslTcpServer
 
             // Write a message to the client.
             byte[] message = Encoding.UTF8.GetBytes("Hello from the server.<EOF>");
-            Console.WriteLine("Sending hello message.");
+            Console.WriteLine($"Sending hello message: {BitConverter.ToString(message)}");
             sslStream.Write(message);
         }
         catch (AuthenticationException e)
