@@ -7,12 +7,14 @@ import android.widget.TextView;
 import android.os.Bundle;
 import android.util.Log;
 import androidx.appcompat.app.AppCompatActivity;
+
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.Socket;
 
-public class MainActivity extends AppCompatActivity {
+import javax.net.ssl.SSLEngine;
 
-    Socket _socket;
-    SSLStream _sslStream;
+public class MainActivity extends AppCompatActivity {
 
     // Used to load the 'native-lib' library on application startup.
     static {
@@ -30,27 +32,32 @@ public class MainActivity extends AppCompatActivity {
             public void run() {
                 try {
                     // NOTE: works only on a real device for me (connected to the same network/wi-fi as the C# server)
-                    _socket = new Socket("192.168.0.5", 8080);
+                    Socket socket = new Socket("192.168.0.5", 8080);
 
-                    //stringFromJNI();
+                    boolean javaImpl = true;
 
-                    _sslStream = new SSLStream(_socket.getOutputStream(), _socket.getInputStream());
-                    _sslStream.AuthenticateAsClient(_socket.getSendBufferSize(), _socket.getReceiveBufferSize());
+                    if (javaImpl) {
+                        SSLStream sslStream = new SSLStream(socket.getOutputStream(), socket.getInputStream());
+                        sslStream.AuthenticateAsClient(socket.getSendBufferSize(), socket.getReceiveBufferSize());
 
-                    // now let's send & wait some app data
-                    _sslStream.send("EgorBo<EOF>".getBytes("UTF-8"));
-                    byte[] serverResponseUtf8 = _sslStream.receive();
-                    final String serverMessage = new String(serverResponseUtf8, "UTF-8");
+                        // now let's send & wait some app data
+                        sslStream.send("EgorBo<EOF>".getBytes("UTF-8"));
+                        byte[] serverResponseUtf8 = sslStream.receive();
+                        final String serverMessage = new String(serverResponseUtf8, "UTF-8");
 
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            TextView tv = findViewById(R.id.sample_text);
-                            tv.setText(serverMessage);
-                        }
-                    });
-
-                    Log.i("EGOR", "server: " + serverMessage);
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                TextView tv = findViewById(R.id.sample_text);
+                                tv.setText(serverMessage);
+                            }
+                        });
+                        Log.i("EGOR", "server: " + serverMessage);
+                    } else {
+                        // Same, but via JNI (not finished yet)
+                        Object object = SSLStreamNative(socket.getInputStream(), socket.getOutputStream());
+                        Log.i("EGOR", "server: " + object);
+                    }
                 } catch (Exception exc) {
                     exc.printStackTrace();
                 }
@@ -58,5 +65,5 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
-    public native String stringFromJNI();
+    public native Object SSLStreamNative(InputStream inputStream, OutputStream outputStream);
 }
