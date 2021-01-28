@@ -7,17 +7,18 @@ typedef struct SSLStream
 {
     jobject sslContext;
     jobject sslEngine;
+    jobject sslSession;
     jobject appOutBuffer;
     jobject netOutBuffer;
-    jobject netInBuffer;
     jobject appInBuffer;
+    jobject netInBuffer;
 } SSLStream;
 
 #define TLS11 11
 #define TLS12 12
 #define TLS13 13
 
-SSLStream* AndroidCrypto_CreateSSLStreamAndStartHandshake(int tlsVersion);
+SSLStream* AndroidCrypto_CreateSSLStreamAndStartHandshake(int tlsVersion, int appOutBufferSize, int appInBufferSize);
 
 int AndroidCrypto_SSLStreamRead(SSLStream* sslStream, uint8_t* buffer, int offset, int length);
 

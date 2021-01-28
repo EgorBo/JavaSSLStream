@@ -123,6 +123,7 @@ jmethodID g_SSLEngineWrapMethod;
 jmethodID g_SSLEngineUnwrapMethod;
 jmethodID g_SSLEngineCloseInboundMethod;
 jmethodID g_SSLEngineCloseOutboundMethod;
+jmethodID g_SSLEngineGetHandshakeStatusMethod;
 
 // java/nio/ByteBuffer
 jclass    g_ByteBuffer;
@@ -148,7 +149,6 @@ jmethodID g_SSLSessionGetPacketBufferSizeMethod;
 // javax/net/ssl/SSLEngineResult
 jclass    g_SSLEngineResult;
 jmethodID g_SSLEngineResultGetStatusMethod;
-jmethodID g_SSLEngineGetHandshakeStatusMethod;
 
 // java/security/cert/X509Certificate
 jclass    g_X509Certificate;
@@ -158,8 +158,7 @@ jclass    g_TrustManager;
 
 jobject ToGRef(JNIEnv *env, jobject lref)
 {
-    if (!lref)
-        return NULL;
+    assert(lref && "object shouldn't be null");
     jobject gref = (*env)->NewGlobalRef(env, lref);
     (*env)->DeleteLocalRef(env, lref);
     return gref;
@@ -346,6 +345,7 @@ JNI_OnLoad(JavaVM *vm, void *reserved)
     g_SSLEngineBeginHandshakeMethod =     GetMethod(env, false, g_SSLEngine, "beginHandshake", "()V");
     g_SSLEngineWrapMethod =               GetMethod(env, false, g_SSLEngine, "wrap", "(Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;)Ljavax/net/ssl/SSLEngineResult;");
     g_SSLEngineUnwrapMethod =             GetMethod(env, false, g_SSLEngine, "unwrap", "(Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;)Ljavax/net/ssl/SSLEngineResult;");
+    g_SSLEngineGetHandshakeStatusMethod = GetMethod(env, false, g_SSLEngine, "getHandshakeStatus", "()Ljavax/net/ssl/SSLEngineResult$HandshakeStatus;");
 
     g_ByteBuffer =                        GetClassGRef(env, "java/nio/ByteBuffer");
     g_ByteBufferAllocateMethod =          GetMethod(env, true,  g_ByteBuffer, "allocate", "(I)Ljava/nio/ByteBuffer;");
@@ -365,9 +365,8 @@ JNI_OnLoad(JavaVM *vm, void *reserved)
     g_SSLSessionGetApplicationBufferSizeMethod = GetMethod(env, false, g_SSLSession, "getApplicationBufferSize", "()I");
     g_SSLSessionGetPacketBufferSizeMethod =      GetMethod(env, false, g_SSLSession, "getPacketBufferSize", "()I");
 
-    g_SSLEngineResult = GetClassGRef(env, "javax/net/ssl/SSLEngineResult");
-    g_SSLSessionGetPacketBufferSizeMethod =      GetMethod(env, false, g_SSLEngineResult, "getStatus", "()Ljavax/net/ssl/SSLEngineResult$Status;");
-    g_SSLEngineGetHandshakeStatusMethod =        GetMethod(env, false, g_SSLEngineResult, "getHandshakeStatus", "()Ljavax/net/ssl/SSLEngineResult$HandshakeStatus;");
+    g_SSLEngineResult =                          GetClassGRef(env, "javax/net/ssl/SSLEngineResult");
+    g_SSLEngineResultGetStatusMethod =           GetMethod(env, false, g_SSLEngineResult, "getStatus", "()Ljavax/net/ssl/SSLEngineResult$Status;");
 
     g_X509Certificate = GetClassGRef(env, "java/security/cert/X509Certificate");
 

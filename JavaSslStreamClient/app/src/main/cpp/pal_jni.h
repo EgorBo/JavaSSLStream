@@ -134,6 +134,7 @@ extern jmethodID g_SSLEngineWrapMethod;
 extern jmethodID g_SSLEngineUnwrapMethod;
 extern jmethodID g_SSLEngineCloseInboundMethod;
 extern jmethodID g_SSLEngineCloseOutboundMethod;
+extern jmethodID g_SSLEngineGetHandshakeStatusMethod;
 
 // java/nio/ByteBuffer
 extern jclass    g_ByteBuffer;
@@ -159,7 +160,6 @@ extern jmethodID g_SSLSessionGetPacketBufferSizeMethod;
 // javax/net/ssl/SSLEngineResult
 extern jclass    g_SSLEngineResult;
 extern jmethodID g_SSLEngineResultGetStatusMethod;
-extern jmethodID g_SSLEngineGetHandshakeStatusMethod;
 
 // java/security/cert/X509Certificate
 extern jclass    g_X509Certificate;
