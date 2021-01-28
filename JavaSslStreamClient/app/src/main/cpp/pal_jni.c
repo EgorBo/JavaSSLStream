@@ -5,6 +5,10 @@
 
 JavaVM* gJvm;
 
+// java/lang/Enum
+jclass    g_Enum;
+jmethodID g_EnumOrdinal;
+
 // java/security/SecureRandom
 jclass    g_randClass;
 jmethodID g_randCtor;
@@ -240,6 +244,13 @@ JNIEnv* GetJNIEnv()
     return env;
 }
 
+int GetEnumAsIntAndRelease(JNIEnv *env, jobject enumObj)
+{
+    int value = (*env)->CallIntMethod(env, enumObj, g_EnumOrdinal);
+    (*env)->DeleteLocalRef(env, enumObj);
+    return value;
+}
+
 JNIEXPORT jint JNICALL
 JNI_OnLoad(JavaVM *vm, void *reserved)
 {
@@ -250,6 +261,10 @@ JNI_OnLoad(JavaVM *vm, void *reserved)
     JNIEnv* env = GetJNIEnv();
 
     // cache some classes and methods while we're in the thread-safe JNI_OnLoad
+
+    g_Enum =                    GetClassGRef(env, "java/lang/Enum");
+    g_EnumOrdinal =             GetMethod(env, false, g_Enum, "ordinal", "()I");
+
     g_randClass =               GetClassGRef(env, "java/security/SecureRandom");
     g_randCtor =                GetMethod(env, false, g_randClass, "<init>", "()V");
     g_randNextBytesMethod =     GetMethod(env, false, g_randClass, "nextBytes", "([B)V");

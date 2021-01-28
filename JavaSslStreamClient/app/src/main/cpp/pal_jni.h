@@ -16,6 +16,10 @@
 
 extern JavaVM* gJvm;
 
+// java/lang/Enum
+extern jclass    g_Enum;
+extern jmethodID g_EnumOrdinal;
+
 // java/security/SecureRandom
 extern jclass    g_randClass;
 extern jmethodID g_randCtor;
@@ -183,3 +187,4 @@ bool CheckJNIExceptions(JNIEnv* env);
 jmethodID GetMethod(JNIEnv *env, bool isStatic, jclass klass, const char* name, const char* sig);
 jfieldID GetField(JNIEnv *env, bool isStatic, jclass klass, const char* name, const char* sig);
 JNIEnv* GetJNIEnv(void);
+int GetEnumAsIntAndRelease(JNIEnv *env, jobject enumObj);
