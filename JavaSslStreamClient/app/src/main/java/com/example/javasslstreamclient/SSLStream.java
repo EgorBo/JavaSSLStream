@@ -151,13 +151,15 @@ public final class SSLStream {
     }
 
     private void doUnwrap() throws IOException {
-        if (netInBuffer.position() == 0) {
-            ReadableByteChannel channel = Channels.newChannel(inputStream);
-            int count = channel.read(netInBuffer);
+        if (netInBuffer.position() == 0)
+        {
+            byte[] tmp = new byte[netInBuffer.limit()];
+            int count = inputStream.read(tmp);
             if (count == -1) {
                 handleEndOfStream();
                 return;
             }
+            netInBuffer.put(tmp, 0, count);
         }
 
         netInBuffer.flip();
@@ -179,13 +181,6 @@ public final class SSLStream {
                 break;
             case BUFFER_UNDERFLOW:
                 netInBuffer = ensureRemaining(netInBuffer, sslEngine.getSession().getPacketBufferSize());
-                ReadableByteChannel channel = Channels.newChannel(inputStream);
-                int count = channel.read(netInBuffer);
-                channel.close();
-                if (count == -1) {
-                    handleEndOfStream();
-                    return;
-                }
                 doUnwrap();
                 break;
             case BUFFER_OVERFLOW:
@@ -203,6 +198,11 @@ public final class SSLStream {
         }
     }
 
+    public void close() throws IOException {
+        sslEngine.closeOutbound();
+        checkHandshakeStatus();
+    }
+
     private ByteBuffer ensureRemaining(ByteBuffer oldBuffer, int newRemaining) {
         if (oldBuffer.remaining() < newRemaining) {
             oldBuffer.flip();
@@ -214,8 +214,5 @@ public final class SSLStream {
         }
     }
 
-    public void close() throws IOException {
-        sslEngine.closeOutbound();
-        checkHandshakeStatus();
-    }
+
 }

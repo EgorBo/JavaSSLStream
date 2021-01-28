@@ -31,6 +31,9 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     // NOTE: works only on a real device for me (connected to the same network/wi-fi as the C# server)
                     _socket = new Socket("192.168.0.5", 8080);
+
+                    //stringFromJNI();
+
                     _sslStream = new SSLStream(_socket.getOutputStream(), _socket.getInputStream());
                     _sslStream.AuthenticateAsClient(_socket.getSendBufferSize(), _socket.getReceiveBufferSize());
 

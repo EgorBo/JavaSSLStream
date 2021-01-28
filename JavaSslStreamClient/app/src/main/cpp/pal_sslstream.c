@@ -10,6 +10,24 @@ int getHandshakeStatus(JNIEnv* env, SSLStream* sslStream, jobject engineResult)
         return GetEnumAsInt(env, (*env)->CallObjectMethod(env, sslStream->sslEngine, g_SSLEngineGetHandshakeStatusMethod), true);
 }
 
+void close(JNIEnv* env, SSLStream* sslStream) {
+    /*
+        sslEngine.closeOutbound();
+        checkHandshakeStatus();
+    */
+    (*env)->CallVoidMethod(env, sslStream->sslEngine, g_SSLEngineCloseOutboundMethod);
+    checkHandshakeStatus(env, sslStream, getHandshakeStatus(env, sslStream, NULL));
+}
+
+void handleEndOfStream(JNIEnv* env, SSLStream* sslStream)  {
+    /*
+        sslEngine.closeInbound();
+        close();
+    */
+    (*env)->CallVoidMethod(env, sslStream->sslEngine, g_SSLEngineCloseInboundMethod);
+    close(env, sslStream);
+}
+
 void flush(JNIEnv* env, SSLStream* sslStream)
 {
     /*
@@ -64,11 +82,6 @@ jobject ensureRemaining(JNIEnv* env, SSLStream* sslStream, jobject oldBuffer, in
     {
         return oldBuffer;
     }
-}
-
-void close(JNIEnv* env, SSLStream* sslStream)
-{
-    assert(0 && "not implemented yet");
 }
 
 void doWrap(JNIEnv* env, SSLStream* sslStream)
@@ -173,6 +186,7 @@ void doUnwrap(JNIEnv* env, SSLStream* sslStream)
                 break;
         }
     */
+    assert(0 && "not implemented yet");
 }
 
 void checkHandshakeStatus(JNIEnv* env, SSLStream* sslStream, int handshakeStatus)
@@ -265,15 +279,19 @@ SSLStream* AndroidCrypto_CreateSSLStreamAndStartHandshake(STREAM_READER streamRe
 
 int AndroidCrypto_SSLStreamRead(SSLStream* sslStream, uint8_t* buffer, int offset, int length)
 {
-    assert(0 && "not implemented yet");
     JNIEnv* env = GetJNIEnv();
+    assert(0 && "not implemented yet");
     return -1;
 }
 
 void AndroidCrypto_SSLStreamWrite(SSLStream* sslStream, uint8_t* buffer, int offset, int length)
 {
-    assert(0 && "not implemented yet");
     JNIEnv* env = GetJNIEnv();
+    /*
+        appOutBuffer.put(message);
+        doWrap();
+    */
+    assert(0 && "not implemented yet");
     return;
 }
 
