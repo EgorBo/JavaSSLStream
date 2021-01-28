@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdint.h>
 
 #define FAIL 0
 #define SUCCESS 1
@@ -123,6 +124,49 @@ extern jmethodID g_X509EncodedKeySpecCtor;
 
 // com/android/org/conscrypt/NativeCrypto
 extern jclass    g_NativeCryptoClass;
+
+// javax/net/ssl/SSLEngine
+extern jclass    g_SSLEngine;
+extern jmethodID g_SSLEngineSetUseClientModeMethod;
+extern jmethodID g_SSLEngineGetSessionMethod;
+extern jmethodID g_SSLEngineBeginHandshakeMethod;
+extern jmethodID g_SSLEngineWrapMethod;
+extern jmethodID g_SSLEngineUnwrapMethod;
+extern jmethodID g_SSLEngineCloseInboundMethod;
+extern jmethodID g_SSLEngineCloseOutboundMethod;
+
+// java/nio/ByteBuffer
+extern jclass    g_ByteBuffer;
+extern jmethodID g_ByteBufferAllocateMethod;
+extern jmethodID g_ByteBufferPutMethod;
+extern jmethodID g_ByteBufferFlipMethod;
+extern jmethodID g_ByteBufferRemainingMethod;
+extern jmethodID g_ByteBufferCompactMethod;
+extern jmethodID g_ByteBufferPositionMethod;
+extern jmethodID g_ByteBufferHasRemainingMethod;
+
+// javax/net/ssl/SSLContext
+extern jclass    g_SSLContext;
+extern jmethodID g_SSLContextGetInstanceMethod;
+extern jmethodID g_SSLContextInitMethod;
+extern jmethodID g_SSLContextCreateSSLEngineMethod;
+
+// javax/net/ssl/SSLSession
+extern jclass    g_SSLSession;
+extern jmethodID g_SSLSessionGetApplicationBufferSizeMethod;
+extern jmethodID g_SSLSessionGetPacketBufferSizeMethod;
+
+// javax/net/ssl/SSLEngineResult
+extern jclass    g_SSLEngineResult;
+extern jmethodID g_SSLEngineResultGetStatusMethod;
+extern jmethodID g_SSLEngineGetHandshakeStatusMethod;
+
+// java/security/cert/X509Certificate
+extern jclass    g_X509Certificate;
+
+// javax/net/ssl/X509Certificate
+extern jclass    g_TrustManager;
+
 
 // JNI helpers
 #define LOG_DEBUG(fmt, ...) ((void)__android_log_print(ANDROID_LOG_DEBUG, "DOTNET", "%s: " fmt, __FUNCTION__, ## __VA_ARGS__))

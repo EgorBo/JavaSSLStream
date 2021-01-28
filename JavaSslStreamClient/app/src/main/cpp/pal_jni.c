@@ -114,6 +114,48 @@ jmethodID g_X509EncodedKeySpecCtor;
 // com/android/org/conscrypt/NativeCrypto
 jclass    g_NativeCryptoClass;
 
+// javax/net/ssl/SSLEngine
+jclass    g_SSLEngine;
+jmethodID g_SSLEngineSetUseClientModeMethod;
+jmethodID g_SSLEngineGetSessionMethod;
+jmethodID g_SSLEngineBeginHandshakeMethod;
+jmethodID g_SSLEngineWrapMethod;
+jmethodID g_SSLEngineUnwrapMethod;
+jmethodID g_SSLEngineCloseInboundMethod;
+jmethodID g_SSLEngineCloseOutboundMethod;
+
+// java/nio/ByteBuffer
+jclass    g_ByteBuffer;
+jmethodID g_ByteBufferAllocateMethod;
+jmethodID g_ByteBufferPutMethod;
+jmethodID g_ByteBufferFlipMethod;
+jmethodID g_ByteBufferRemainingMethod;
+jmethodID g_ByteBufferCompactMethod;
+jmethodID g_ByteBufferPositionMethod;
+jmethodID g_ByteBufferHasRemainingMethod;
+
+// javax/net/ssl/SSLContext
+jclass    g_SSLContext;
+jmethodID g_SSLContextGetInstanceMethod;
+jmethodID g_SSLContextInitMethod;
+jmethodID g_SSLContextCreateSSLEngineMethod;
+
+// javax/net/ssl/SSLSession
+jclass    g_SSLSession;
+jmethodID g_SSLSessionGetApplicationBufferSizeMethod;
+jmethodID g_SSLSessionGetPacketBufferSizeMethod;
+
+// javax/net/ssl/SSLEngineResult
+jclass    g_SSLEngineResult;
+jmethodID g_SSLEngineResultGetStatusMethod;
+jmethodID g_SSLEngineGetHandshakeStatusMethod;
+
+// java/security/cert/X509Certificate
+jclass    g_X509Certificate;
+
+// javax/net/ssl/X509Certificate
+jclass    g_TrustManager;
+
 jobject ToGRef(JNIEnv *env, jobject lref)
 {
     if (!lref)
@@ -202,101 +244,132 @@ JNIEnv* GetJNIEnv()
 JNIEXPORT jint JNICALL
 JNI_OnLoad(JavaVM *vm, void *reserved)
 {
-(void)reserved;
-LOG_INFO("JNI_OnLoad in pal_jni.c");
-gJvm = vm;
+    (void)reserved;
+    LOG_INFO("JNI_OnLoad in pal_jni.c");
+    gJvm = vm;
 
-JNIEnv* env = GetJNIEnv();
+    JNIEnv* env = GetJNIEnv();
 
-// cache some classes and methods while we're in the thread-safe JNI_OnLoad
-g_randClass =               GetClassGRef(env, "java/security/SecureRandom");
-g_randCtor =                GetMethod(env, false, g_randClass, "<init>", "()V");
-g_randNextBytesMethod =     GetMethod(env, false, g_randClass, "nextBytes", "([B)V");
+    // cache some classes and methods while we're in the thread-safe JNI_OnLoad
+    g_randClass =               GetClassGRef(env, "java/security/SecureRandom");
+    g_randCtor =                GetMethod(env, false, g_randClass, "<init>", "()V");
+    g_randNextBytesMethod =     GetMethod(env, false, g_randClass, "nextBytes", "([B)V");
 
-g_mdClass =                 GetClassGRef(env, "java/security/MessageDigest");
-g_mdGetInstanceMethod =     GetMethod(env, true,  g_mdClass, "getInstance", "(Ljava/lang/String;)Ljava/security/MessageDigest;");
-g_mdResetMethod =           GetMethod(env, false, g_mdClass, "reset", "()V");
-g_mdDigestMethod =          GetMethod(env, false, g_mdClass, "digest", "([B)[B");
-g_mdDigestCurrentMethodId = GetMethod(env, false, g_mdClass, "digest", "()[B");
-g_mdUpdateMethod =          GetMethod(env, false, g_mdClass, "update", "([B)V");
+    g_mdClass =                 GetClassGRef(env, "java/security/MessageDigest");
+    g_mdGetInstanceMethod =     GetMethod(env, true,  g_mdClass, "getInstance", "(Ljava/lang/String;)Ljava/security/MessageDigest;");
+    g_mdResetMethod =           GetMethod(env, false, g_mdClass, "reset", "()V");
+    g_mdDigestMethod =          GetMethod(env, false, g_mdClass, "digest", "([B)[B");
+    g_mdDigestCurrentMethodId = GetMethod(env, false, g_mdClass, "digest", "()[B");
+    g_mdUpdateMethod =          GetMethod(env, false, g_mdClass, "update", "([B)V");
 
-g_macClass =                GetClassGRef(env, "javax/crypto/Mac");
-g_macGetInstanceMethod =    GetMethod(env, true,  g_macClass, "getInstance", "(Ljava/lang/String;)Ljavax/crypto/Mac;");
-g_macDoFinalMethod =        GetMethod(env, false, g_macClass, "doFinal", "()[B");
-g_macUpdateMethod =         GetMethod(env, false, g_macClass, "update", "([B)V");
-g_macInitMethod =           GetMethod(env, false, g_macClass, "init", "(Ljava/security/Key;)V");
-g_macResetMethod =          GetMethod(env, false, g_macClass, "reset", "()V");
+    g_macClass =                GetClassGRef(env, "javax/crypto/Mac");
+    g_macGetInstanceMethod =    GetMethod(env, true,  g_macClass, "getInstance", "(Ljava/lang/String;)Ljavax/crypto/Mac;");
+    g_macDoFinalMethod =        GetMethod(env, false, g_macClass, "doFinal", "()[B");
+    g_macUpdateMethod =         GetMethod(env, false, g_macClass, "update", "([B)V");
+    g_macInitMethod =           GetMethod(env, false, g_macClass, "init", "(Ljava/security/Key;)V");
+    g_macResetMethod =          GetMethod(env, false, g_macClass, "reset", "()V");
 
-g_sksClass =                GetClassGRef(env, "javax/crypto/spec/SecretKeySpec");
-g_sksCtor =                 GetMethod(env, false, g_sksClass, "<init>", "([BLjava/lang/String;)V");
+    g_sksClass =                GetClassGRef(env, "javax/crypto/spec/SecretKeySpec");
+    g_sksCtor =                 GetMethod(env, false, g_sksClass, "<init>", "([BLjava/lang/String;)V");
 
-g_cipherClass =             GetClassGRef(env, "javax/crypto/Cipher");
-g_cipherGetInstanceMethod = GetMethod(env, true,  g_cipherClass, "getInstance", "(Ljava/lang/String;)Ljavax/crypto/Cipher;");
-g_getBlockSizeMethod =      GetMethod(env, false, g_cipherClass, "getBlockSize", "()I");
-g_cipherDoFinalMethod =     GetMethod(env, false, g_cipherClass, "doFinal", "()[B");
-g_cipherDoFinal2Method =    GetMethod(env, false, g_cipherClass, "doFinal", "([B)[B");
-g_cipherUpdateMethod =      GetMethod(env, false, g_cipherClass, "update", "([B)[B");
-g_cipherUpdateAADMethod =   GetMethod(env, false, g_cipherClass, "updateAAD", "([B)V");
-g_cipherInitMethod =        GetMethod(env, false, g_cipherClass, "init", "(ILjava/security/Key;Ljava/security/spec/AlgorithmParameterSpec;)V");
-g_cipherInit2Method =       GetMethod(env, false, g_cipherClass, "init", "(ILjava/security/Key;)V");
+    g_cipherClass =             GetClassGRef(env, "javax/crypto/Cipher");
+    g_cipherGetInstanceMethod = GetMethod(env, true,  g_cipherClass, "getInstance", "(Ljava/lang/String;)Ljavax/crypto/Cipher;");
+    g_getBlockSizeMethod =      GetMethod(env, false, g_cipherClass, "getBlockSize", "()I");
+    g_cipherDoFinalMethod =     GetMethod(env, false, g_cipherClass, "doFinal", "()[B");
+    g_cipherDoFinal2Method =    GetMethod(env, false, g_cipherClass, "doFinal", "([B)[B");
+    g_cipherUpdateMethod =      GetMethod(env, false, g_cipherClass, "update", "([B)[B");
+    g_cipherUpdateAADMethod =   GetMethod(env, false, g_cipherClass, "updateAAD", "([B)V");
+    g_cipherInitMethod =        GetMethod(env, false, g_cipherClass, "init", "(ILjava/security/Key;Ljava/security/spec/AlgorithmParameterSpec;)V");
+    g_cipherInit2Method =       GetMethod(env, false, g_cipherClass, "init", "(ILjava/security/Key;)V");
 
-g_ivPsClass =               GetClassGRef(env, "javax/crypto/spec/IvParameterSpec");
-g_ivPsCtor =                GetMethod(env, false, g_ivPsClass, "<init>", "([B)V");
+    g_ivPsClass =               GetClassGRef(env, "javax/crypto/spec/IvParameterSpec");
+    g_ivPsCtor =                GetMethod(env, false, g_ivPsClass, "<init>", "([B)V");
 
-g_GCMParameterSpecClass =   GetClassGRef(env, "javax/crypto/spec/GCMParameterSpec");
-g_GCMParameterSpecCtor =    GetMethod(env, false, g_GCMParameterSpecClass, "<init>", "(I[B)V");
+    g_GCMParameterSpecClass =   GetClassGRef(env, "javax/crypto/spec/GCMParameterSpec");
+    g_GCMParameterSpecCtor =    GetMethod(env, false, g_GCMParameterSpecClass, "<init>", "(I[B)V");
 
-g_bigNumClass =             GetClassGRef(env, "java/math/BigInteger");
-g_bigNumCtor =              GetMethod(env, false, g_bigNumClass, "<init>", "([B)V");
-g_toByteArrayMethod =       GetMethod(env, false, g_bigNumClass, "toByteArray", "()[B");
+    g_bigNumClass =             GetClassGRef(env, "java/math/BigInteger");
+    g_bigNumCtor =              GetMethod(env, false, g_bigNumClass, "<init>", "([B)V");
+    g_toByteArrayMethod =       GetMethod(env, false, g_bigNumClass, "toByteArray", "()[B");
 
-g_sslParamsClass =              GetClassGRef(env, "javax/net/ssl/SSLParameters");
-g_sslParamsGetProtocolsMethod = GetMethod(env, false,  g_sslParamsClass, "getProtocols", "()[Ljava/lang/String;");
+    g_sslParamsClass =              GetClassGRef(env, "javax/net/ssl/SSLParameters");
+    g_sslParamsGetProtocolsMethod = GetMethod(env, false,  g_sslParamsClass, "getProtocols", "()[Ljava/lang/String;");
 
-g_sslCtxClass =                     GetClassGRef(env, "javax/net/ssl/SSLContext");
-g_sslCtxGetDefaultMethod =          GetMethod(env, true,  g_sslCtxClass, "getDefault", "()Ljavax/net/ssl/SSLContext;");
-g_sslCtxGetDefaultSslParamsMethod = GetMethod(env, false, g_sslCtxClass, "getDefaultSSLParameters", "()Ljavax/net/ssl/SSLParameters;");
+    g_sslCtxClass =                     GetClassGRef(env, "javax/net/ssl/SSLContext");
+    g_sslCtxGetDefaultMethod =          GetMethod(env, true,  g_sslCtxClass, "getDefault", "()Ljavax/net/ssl/SSLContext;");
+    g_sslCtxGetDefaultSslParamsMethod = GetMethod(env, false, g_sslCtxClass, "getDefaultSSLParameters", "()Ljavax/net/ssl/SSLParameters;");
 
-g_RSAKeyClass =                    GetClassGRef(env, "java/security/interfaces/RSAKey");
-g_RSAKeyGetModulus =               GetMethod(env, false, g_RSAKeyClass, "getModulus", "()Ljava/math/BigInteger;");
+    g_RSAKeyClass =                    GetClassGRef(env, "java/security/interfaces/RSAKey");
+    g_RSAKeyGetModulus =               GetMethod(env, false, g_RSAKeyClass, "getModulus", "()Ljava/math/BigInteger;");
 
-g_RSAPublicKeyClass =              GetClassGRef(env, "java/security/interfaces/RSAPublicKey");
-g_RSAPublicKeyGetPubExpMethod =    GetMethod(env, false, g_RSAPublicKeyClass, "getPublicExponent", "()Ljava/math/BigInteger;");
+    g_RSAPublicKeyClass =              GetClassGRef(env, "java/security/interfaces/RSAPublicKey");
+    g_RSAPublicKeyGetPubExpMethod =    GetMethod(env, false, g_RSAPublicKeyClass, "getPublicExponent", "()Ljava/math/BigInteger;");
 
-g_keyPairClass =                   GetClassGRef(env, "java/security/KeyPair");
-g_keyPairGetPrivateMethod =        GetMethod(env, false, g_keyPairClass, "getPrivate", "()Ljava/security/PrivateKey;");
-g_keyPairGetPublicMethod =         GetMethod(env, false, g_keyPairClass, "getPublic", "()Ljava/security/PublicKey;");
+    g_keyPairClass =                   GetClassGRef(env, "java/security/KeyPair");
+    g_keyPairGetPrivateMethod =        GetMethod(env, false, g_keyPairClass, "getPrivate", "()Ljava/security/PrivateKey;");
+    g_keyPairGetPublicMethod =         GetMethod(env, false, g_keyPairClass, "getPublic", "()Ljava/security/PublicKey;");
 
-g_keyPairGenClass =                GetClassGRef(env, "java/security/KeyPairGenerator");
-g_keyPairGenGetInstanceMethod =    GetMethod(env, true,  g_keyPairGenClass, "getInstance", "(Ljava/lang/String;)Ljava/security/KeyPairGenerator;");
-g_keyPairGenInitializeMethod =     GetMethod(env, false, g_keyPairGenClass, "initialize", "(I)V");
-g_keyPairGenGenKeyPairMethod =     GetMethod(env, false, g_keyPairGenClass, "genKeyPair", "()Ljava/security/KeyPair;");
+    g_keyPairGenClass =                GetClassGRef(env, "java/security/KeyPairGenerator");
+    g_keyPairGenGetInstanceMethod =    GetMethod(env, true,  g_keyPairGenClass, "getInstance", "(Ljava/lang/String;)Ljava/security/KeyPairGenerator;");
+    g_keyPairGenInitializeMethod =     GetMethod(env, false, g_keyPairGenClass, "initialize", "(I)V");
+    g_keyPairGenGenKeyPairMethod =     GetMethod(env, false, g_keyPairGenClass, "genKeyPair", "()Ljava/security/KeyPair;");
 
-g_RSAPrivateCrtKeyClass =          GetClassGRef(env, "java/security/interfaces/RSAPrivateCrtKey");
-g_RSAPrivateCrtKeyPubExpField =    GetMethod(env, false, g_RSAPrivateCrtKeyClass, "getPublicExponent", "()Ljava/math/BigInteger;");
-g_RSAPrivateCrtKeyPrimePField =    GetMethod(env, false, g_RSAPrivateCrtKeyClass, "getPrimeP", "()Ljava/math/BigInteger;");
-g_RSAPrivateCrtKeyPrimeQField =    GetMethod(env, false, g_RSAPrivateCrtKeyClass, "getPrimeQ", "()Ljava/math/BigInteger;");
-g_RSAPrivateCrtKeyPrimeExpPField = GetMethod(env, false, g_RSAPrivateCrtKeyClass, "getPrimeExponentP", "()Ljava/math/BigInteger;");
-g_RSAPrivateCrtKeyPrimeExpQField = GetMethod(env, false, g_RSAPrivateCrtKeyClass, "getPrimeExponentQ", "()Ljava/math/BigInteger;");
-g_RSAPrivateCrtKeyCrtCoefField =   GetMethod(env, false, g_RSAPrivateCrtKeyClass, "getCrtCoefficient", "()Ljava/math/BigInteger;");
-g_RSAPrivateCrtKeyModulusField =   GetMethod(env, false, g_RSAPrivateCrtKeyClass, "getModulus", "()Ljava/math/BigInteger;");
-g_RSAPrivateCrtKeyPrivExpField =   GetMethod(env, false, g_RSAPrivateCrtKeyClass, "getPrivateExponent", "()Ljava/math/BigInteger;");
+    g_RSAPrivateCrtKeyClass =          GetClassGRef(env, "java/security/interfaces/RSAPrivateCrtKey");
+    g_RSAPrivateCrtKeyPubExpField =    GetMethod(env, false, g_RSAPrivateCrtKeyClass, "getPublicExponent", "()Ljava/math/BigInteger;");
+    g_RSAPrivateCrtKeyPrimePField =    GetMethod(env, false, g_RSAPrivateCrtKeyClass, "getPrimeP", "()Ljava/math/BigInteger;");
+    g_RSAPrivateCrtKeyPrimeQField =    GetMethod(env, false, g_RSAPrivateCrtKeyClass, "getPrimeQ", "()Ljava/math/BigInteger;");
+    g_RSAPrivateCrtKeyPrimeExpPField = GetMethod(env, false, g_RSAPrivateCrtKeyClass, "getPrimeExponentP", "()Ljava/math/BigInteger;");
+    g_RSAPrivateCrtKeyPrimeExpQField = GetMethod(env, false, g_RSAPrivateCrtKeyClass, "getPrimeExponentQ", "()Ljava/math/BigInteger;");
+    g_RSAPrivateCrtKeyCrtCoefField =   GetMethod(env, false, g_RSAPrivateCrtKeyClass, "getCrtCoefficient", "()Ljava/math/BigInteger;");
+    g_RSAPrivateCrtKeyModulusField =   GetMethod(env, false, g_RSAPrivateCrtKeyClass, "getModulus", "()Ljava/math/BigInteger;");
+    g_RSAPrivateCrtKeyPrivExpField =   GetMethod(env, false, g_RSAPrivateCrtKeyClass, "getPrivateExponent", "()Ljava/math/BigInteger;");
 
-g_RSAPrivateCrtKeySpecClass =      GetClassGRef(env, "java/security/spec/RSAPrivateCrtKeySpec");
-g_RSAPrivateCrtKeySpecCtor =       GetMethod(env, false, g_RSAPrivateCrtKeySpecClass, "<init>", "(Ljava/math/BigInteger;Ljava/math/BigInteger;Ljava/math/BigInteger;Ljava/math/BigInteger;Ljava/math/BigInteger;Ljava/math/BigInteger;Ljava/math/BigInteger;Ljava/math/BigInteger;)V");
+    g_RSAPrivateCrtKeySpecClass =      GetClassGRef(env, "java/security/spec/RSAPrivateCrtKeySpec");
+    g_RSAPrivateCrtKeySpecCtor =       GetMethod(env, false, g_RSAPrivateCrtKeySpecClass, "<init>", "(Ljava/math/BigInteger;Ljava/math/BigInteger;Ljava/math/BigInteger;Ljava/math/BigInteger;Ljava/math/BigInteger;Ljava/math/BigInteger;Ljava/math/BigInteger;Ljava/math/BigInteger;)V");
 
-g_RSAPublicCrtKeySpecClass =       GetClassGRef(env, "java/security/spec/RSAPublicKeySpec");
-g_RSAPublicCrtKeySpecCtor =        GetMethod(env, false, g_RSAPublicCrtKeySpecClass, "<init>", "(Ljava/math/BigInteger;Ljava/math/BigInteger;)V");
+    g_RSAPublicCrtKeySpecClass =       GetClassGRef(env, "java/security/spec/RSAPublicKeySpec");
+    g_RSAPublicCrtKeySpecCtor =        GetMethod(env, false, g_RSAPublicCrtKeySpecClass, "<init>", "(Ljava/math/BigInteger;Ljava/math/BigInteger;)V");
 
-g_KeyFactoryClass =                GetClassGRef(env, "java/security/KeyFactory");
-g_KeyFactoryGetInstanceMethod =    GetMethod(env, true, g_KeyFactoryClass, "getInstance", "(Ljava/lang/String;)Ljava/security/KeyFactory;");
-g_KeyFactoryGenPrivateMethod =     GetMethod(env, false, g_KeyFactoryClass, "generatePrivate", "(Ljava/security/spec/KeySpec;)Ljava/security/PrivateKey;");
-g_KeyFactoryGenPublicMethod =      GetMethod(env, false, g_KeyFactoryClass, "generatePublic", "(Ljava/security/spec/KeySpec;)Ljava/security/PublicKey;");
+    g_KeyFactoryClass =                GetClassGRef(env, "java/security/KeyFactory");
+    g_KeyFactoryGetInstanceMethod =    GetMethod(env, true, g_KeyFactoryClass, "getInstance", "(Ljava/lang/String;)Ljava/security/KeyFactory;");
+    g_KeyFactoryGenPrivateMethod =     GetMethod(env, false, g_KeyFactoryClass, "generatePrivate", "(Ljava/security/spec/KeySpec;)Ljava/security/PrivateKey;");
+    g_KeyFactoryGenPublicMethod =      GetMethod(env, false, g_KeyFactoryClass, "generatePublic", "(Ljava/security/spec/KeySpec;)Ljava/security/PublicKey;");
 
-g_X509EncodedKeySpecClass =        GetClassGRef(env, "java/security/spec/X509EncodedKeySpec");
-g_X509EncodedKeySpecCtor =         GetMethod(env, false, g_X509EncodedKeySpecClass, "<init>", "([B)V");
+    g_X509EncodedKeySpecClass =        GetClassGRef(env, "java/security/spec/X509EncodedKeySpec");
+    g_X509EncodedKeySpecCtor =         GetMethod(env, false, g_X509EncodedKeySpecClass, "<init>", "([B)V");
 
-g_NativeCryptoClass =              GetClassGRef(env, "com/android/org/conscrypt/NativeCrypto");
+    g_NativeCryptoClass =              GetClassGRef(env, "com/android/org/conscrypt/NativeCrypto");
 
-return JNI_VERSION_1_6;
+    g_SSLEngine =                         GetClassGRef(env, "javax/net/ssl/SSLEngine");
+    g_SSLEngineSetUseClientModeMethod =   GetMethod(env, false, g_SSLEngine, "setUseClientMode", "(Z)V");
+    g_SSLEngineGetSessionMethod =         GetMethod(env, false, g_SSLEngine, "getSession", "()Ljavax/net/ssl/SSLSession;");
+    g_SSLEngineBeginHandshakeMethod =     GetMethod(env, false, g_SSLEngine, "beginHandshake", "()V");
+    g_SSLEngineWrapMethod =               GetMethod(env, false, g_SSLEngine, "wrap", "(Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;)Ljavax/net/ssl/SSLEngineResult;");
+    g_SSLEngineUnwrapMethod =             GetMethod(env, false, g_SSLEngine, "unwrap", "(Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;)Ljavax/net/ssl/SSLEngineResult;");
+
+    g_ByteBuffer =                        GetClassGRef(env, "java/nio/ByteBuffer");
+    g_ByteBufferAllocateMethod =          GetMethod(env, true,  g_ByteBuffer, "allocate", "(I)Ljava/nio/ByteBuffer;");
+    g_ByteBufferPutMethod =               GetMethod(env, false, g_ByteBuffer, "put", "(Ljava/nio/ByteBuffer;)Ljava/nio/ByteBuffer;");
+    g_ByteBufferFlipMethod =              GetMethod(env, false, g_ByteBuffer, "flip", "()Ljava/nio/Buffer;");
+    g_ByteBufferRemainingMethod =         GetMethod(env, false, g_ByteBuffer, "remaining", "()I");
+    g_ByteBufferCompactMethod =           GetMethod(env, false, g_ByteBuffer, "compact", "()Ljava/nio/ByteBuffer;");
+    g_ByteBufferPositionMethod =          GetMethod(env, false, g_ByteBuffer, "position", "()I");
+    g_ByteBufferHasRemainingMethod =      GetMethod(env, false, g_ByteBuffer, "hasRemaining", "()Z");
+
+    g_SSLContext =                        GetClassGRef(env, "javax/net/ssl/SSLContext");
+    g_SSLContextGetInstanceMethod =       GetMethod(env, true,  g_SSLContext, "getInstance", "(Ljava/lang/String;)Ljavax/net/ssl/SSLContext;");
+    g_SSLContextInitMethod =              GetMethod(env, false, g_SSLContext, "init", "([Ljavax/net/ssl/KeyManager;[Ljavax/net/ssl/TrustManager;Ljava/security/SecureRandom;)V");
+    g_SSLContextCreateSSLEngineMethod =   GetMethod(env, false, g_SSLContext, "createSSLEngine", "()Ljavax/net/ssl/SSLEngine;");
+
+    g_SSLSession =                               GetClassGRef(env, "javax/net/ssl/SSLSession");
+    g_SSLSessionGetApplicationBufferSizeMethod = GetMethod(env, false, g_SSLSession, "getApplicationBufferSize", "()I");
+    g_SSLSessionGetPacketBufferSizeMethod =      GetMethod(env, false, g_SSLSession, "getPacketBufferSize", "()I");
+
+    g_SSLEngineResult = GetClassGRef(env, "javax/net/ssl/SSLEngineResult");
+    g_SSLSessionGetPacketBufferSizeMethod =      GetMethod(env, false, g_SSLEngineResult, "getStatus", "()Ljavax/net/ssl/SSLEngineResult$Status;");
+    g_SSLEngineGetHandshakeStatusMethod =        GetMethod(env, false, g_SSLEngineResult, "getHandshakeStatus", "()Ljavax/net/ssl/SSLEngineResult$HandshakeStatus;");
+
+    g_X509Certificate = GetClassGRef(env, "java/security/cert/X509Certificate");
+
+    return JNI_VERSION_1_6;
 }
