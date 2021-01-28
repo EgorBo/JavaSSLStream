@@ -145,7 +145,10 @@ extern jclass    g_ByteBuffer;
 extern jmethodID g_ByteBufferAllocateMethod;
 extern jmethodID g_ByteBufferPutMethod;
 extern jmethodID g_ByteBufferFlipMethod;
+extern jmethodID g_ByteBufferGetMethod;
+extern jmethodID g_ByteBufferLimitMethod;
 extern jmethodID g_ByteBufferRemainingMethod;
+extern jmethodID g_ByteBufferPutBufferMethod;
 extern jmethodID g_ByteBufferCompactMethod;
 extern jmethodID g_ByteBufferPositionMethod;
 extern jmethodID g_ByteBufferHasRemainingMethod;
@@ -164,6 +167,7 @@ extern jmethodID g_SSLSessionGetPacketBufferSizeMethod;
 // javax/net/ssl/SSLEngineResult
 extern jclass    g_SSLEngineResult;
 extern jmethodID g_SSLEngineResultGetStatusMethod;
+extern jmethodID g_SSLEngineResultGetHandshakeStatusMethod;
 
 // java/security/cert/X509Certificate
 extern jclass    g_X509Certificate;
@@ -187,4 +191,4 @@ bool CheckJNIExceptions(JNIEnv* env);
 jmethodID GetMethod(JNIEnv *env, bool isStatic, jclass klass, const char* name, const char* sig);
 jfieldID GetField(JNIEnv *env, bool isStatic, jclass klass, const char* name, const char* sig);
 JNIEnv* GetJNIEnv(void);
-int GetEnumAsIntAndRelease(JNIEnv *env, jobject enumObj);
+int GetEnumAsInt(JNIEnv *env, jobject enumObj, bool releaseEnumObj);

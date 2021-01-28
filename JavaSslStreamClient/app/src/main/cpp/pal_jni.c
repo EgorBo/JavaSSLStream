@@ -134,6 +134,9 @@ jclass    g_ByteBuffer;
 jmethodID g_ByteBufferAllocateMethod;
 jmethodID g_ByteBufferPutMethod;
 jmethodID g_ByteBufferFlipMethod;
+jmethodID g_ByteBufferGetMethod;
+jmethodID g_ByteBufferPutBufferMethod;
+jmethodID g_ByteBufferLimitMethod;
 jmethodID g_ByteBufferRemainingMethod;
 jmethodID g_ByteBufferCompactMethod;
 jmethodID g_ByteBufferPositionMethod;
@@ -153,6 +156,7 @@ jmethodID g_SSLSessionGetPacketBufferSizeMethod;
 // javax/net/ssl/SSLEngineResult
 jclass    g_SSLEngineResult;
 jmethodID g_SSLEngineResultGetStatusMethod;
+jmethodID g_SSLEngineResultGetHandshakeStatusMethod;
 
 // java/security/cert/X509Certificate
 jclass    g_X509Certificate;
@@ -244,10 +248,11 @@ JNIEnv* GetJNIEnv()
     return env;
 }
 
-int GetEnumAsIntAndRelease(JNIEnv *env, jobject enumObj)
+int GetEnumAsInt(JNIEnv *env, jobject enumObj, bool releaseEnumObj)
 {
     int value = (*env)->CallIntMethod(env, enumObj, g_EnumOrdinal);
-    (*env)->DeleteLocalRef(env, enumObj);
+    if (releaseEnumObj)
+        (*env)->DeleteLocalRef(env, enumObj);
     return value;
 }
 
@@ -366,6 +371,9 @@ JNI_OnLoad(JavaVM *vm, void *reserved)
     g_ByteBufferAllocateMethod =          GetMethod(env, true,  g_ByteBuffer, "allocate", "(I)Ljava/nio/ByteBuffer;");
     g_ByteBufferPutMethod =               GetMethod(env, false, g_ByteBuffer, "put", "(Ljava/nio/ByteBuffer;)Ljava/nio/ByteBuffer;");
     g_ByteBufferFlipMethod =              GetMethod(env, false, g_ByteBuffer, "flip", "()Ljava/nio/Buffer;");
+    g_ByteBufferLimitMethod =             GetMethod(env, false, g_ByteBuffer, "limit", "()I");
+    g_ByteBufferGetMethod =               GetMethod(env, false, g_ByteBuffer, "get", "([B)Ljava/nio/Buffer;");
+    g_ByteBufferPutBufferMethod =         GetMethod(env, false, g_ByteBuffer, "put", "(Ljava/nio/Buffer;)Ljava/nio/Buffer;");
     g_ByteBufferRemainingMethod =         GetMethod(env, false, g_ByteBuffer, "remaining", "()I");
     g_ByteBufferCompactMethod =           GetMethod(env, false, g_ByteBuffer, "compact", "()Ljava/nio/ByteBuffer;");
     g_ByteBufferPositionMethod =          GetMethod(env, false, g_ByteBuffer, "position", "()I");
@@ -382,6 +390,7 @@ JNI_OnLoad(JavaVM *vm, void *reserved)
 
     g_SSLEngineResult =                          GetClassGRef(env, "javax/net/ssl/SSLEngineResult");
     g_SSLEngineResultGetStatusMethod =           GetMethod(env, false, g_SSLEngineResult, "getStatus", "()Ljavax/net/ssl/SSLEngineResult$Status;");
+    g_SSLEngineResultGetHandshakeStatusMethod =  GetMethod(env, false, g_SSLEngineResult, "getHandshakeStatus", "()Ljavax/net/ssl/SSLEngineResult$HandshakeStatus;");
 
     g_X509Certificate = GetClassGRef(env, "java/security/cert/X509Certificate");
 

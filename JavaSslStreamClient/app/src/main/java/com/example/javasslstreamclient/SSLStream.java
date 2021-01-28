@@ -144,14 +144,10 @@ public final class SSLStream {
 
     private void flush() throws IOException {
         netOutBuffer.flip();
-        try {
-            while (netOutBuffer.hasRemaining()) {
-                WritableByteChannel channel = Channels.newChannel(outputStream);
-                channel.write(netOutBuffer);
-            }
-        } finally {
-            netOutBuffer.compact();
-        }
+        byte[] data = new byte[netOutBuffer.limit()];
+        netOutBuffer.get(data);
+        outputStream.write(data, 0, data.length);
+        netOutBuffer.compact();
     }
 
     private void doUnwrap() throws IOException {

@@ -3,6 +3,9 @@
 
 #include "pal_jni.h"
 
+typedef void (*STREAM_WRITER)(uint8_t*, uint32_t, uint32_t);
+typedef int (*STREAM_READER)(uint8_t*, uint32_t, uint32_t);
+
 typedef struct SSLStream
 {
     jobject sslContext;
@@ -12,6 +15,8 @@ typedef struct SSLStream
     jobject netOutBuffer;
     jobject appInBuffer;
     jobject netInBuffer;
+    STREAM_READER streamReader;
+    STREAM_WRITER streamWriter;
 } SSLStream;
 
 #define TLS11 11
@@ -24,7 +29,12 @@ typedef struct SSLStream
 #define HANDSHAKE_STATUS__NEED_WRAP 3
 #define HANDSHAKE_STATUS__NEED_UNWRAP 4
 
-SSLStream* AndroidCrypto_CreateSSLStreamAndStartHandshake(int tlsVersion, int appOutBufferSize, int appInBufferSize);
+#define STATUS__BUFFER_UNDERFLOW 0
+#define STATUS__BUFFER_OVERFLOW 1
+#define STATUS__OK 2
+#define STATUS__CLOSED 3
+
+SSLStream* AndroidCrypto_CreateSSLStreamAndStartHandshake(STREAM_READER streamReader, STREAM_WRITER streamWriter, int tlsVersion, int appOutBufferSize, int appInBufferSize);
 
 int AndroidCrypto_SSLStreamRead(SSLStream* sslStream, uint8_t* buffer, int offset, int length);
 
