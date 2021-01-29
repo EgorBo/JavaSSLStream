@@ -133,6 +133,7 @@ jmethodID g_SSLEngineGetHandshakeStatusMethod;
 jclass    g_ByteBuffer;
 jmethodID g_ByteBufferAllocateMethod;
 jmethodID g_ByteBufferPutMethod;
+jmethodID g_ByteBufferPut2Method;
 jmethodID g_ByteBufferFlipMethod;
 jmethodID g_ByteBufferGetMethod;
 jmethodID g_ByteBufferPutBufferMethod;
@@ -372,6 +373,7 @@ JNI_OnLoad(JavaVM *vm, void *reserved)
     g_ByteBuffer =                        GetClassGRef(env, "java/nio/ByteBuffer");
     g_ByteBufferAllocateMethod =          GetMethod(env, true,  g_ByteBuffer, "allocate", "(I)Ljava/nio/ByteBuffer;");
     g_ByteBufferPutMethod =               GetMethod(env, false, g_ByteBuffer, "put", "(Ljava/nio/ByteBuffer;)Ljava/nio/ByteBuffer;");
+    g_ByteBufferPut2Method =              GetMethod(env, false, g_ByteBuffer, "put", "([B)Ljava/nio/ByteBuffer;");
     g_ByteBufferFlipMethod =              GetMethod(env, false, g_ByteBuffer, "flip", "()Ljava/nio/Buffer;");
     g_ByteBufferLimitMethod =             GetMethod(env, false, g_ByteBuffer, "limit", "()I");
     g_ByteBufferGetMethod =               GetMethod(env, false, g_ByteBuffer, "get", "([B)Ljava/nio/ByteBuffer;");

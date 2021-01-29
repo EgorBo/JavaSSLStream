@@ -40,7 +40,7 @@ void flush(JNIEnv* env, SSLStream* sslStream)
 
     // DeleteLocalRef because we don't need the return value (Buffer)
     (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->netOutBuffer, g_ByteBufferFlipMethod));
-    int bufferLimit = (*env)->CallIntMethod(env, sslStream->netOutBuffer, g_ByteBufferFlipMethod);
+    int bufferLimit = (*env)->CallIntMethod(env, sslStream->netOutBuffer, g_ByteBufferLimitMethod);
     jbyteArray data = (*env)->NewByteArray(env, bufferLimit);
 
     // DeleteLocalRef because we don't need the return value (Buffer)
@@ -280,19 +280,49 @@ SSLStream* AndroidCrypto_CreateSSLStreamAndStartHandshake(STREAM_READER streamRe
 int AndroidCrypto_SSLStreamRead(SSLStream* sslStream, uint8_t* buffer, int offset, int length)
 {
     JNIEnv* env = GetJNIEnv();
-    assert(0 && "not implemented yet");
-    return -1;
+
+    // appInBuffer.flip();
+    // int rem = appInBuffer.remaining();
+    // if (rem> 0) {
+    //     byte[] data = new byte[rem];
+    //     appInBuffer.get(data);
+    //     appInBuffer.compact();
+    // } else {
+    //     appInBuffer.compact();
+    //     doUnwrap();
+    // }
+
+    (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->netOutBuffer, g_ByteBufferFlipMethod));
+    int rem = (*env)->CallIntMethod(env, sslStream->appInBuffer, g_ByteBufferRemainingMethod);
+    if (rem > 0)
+    {
+        jbyteArray data = (*env)->NewByteArray(env, rem);
+        (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->appOutBuffer, g_ByteBufferGetMethod, data));
+        (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->netOutBuffer, g_ByteBufferCompactMethod));
+
+        //TODO: (*env)->GetByteArrayRegion(env, data, 0, bufferLimit, (jbyte*) dataPtr);
+        return rem;
+    }
+    else
+    {
+        (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->netOutBuffer, g_ByteBufferCompactMethod));
+        doUnwrap(env, sslStream);
+        return AndroidCrypto_SSLStreamRead(sslStream, buffer, offset, length);
+    }
 }
 
 void AndroidCrypto_SSLStreamWrite(SSLStream* sslStream, uint8_t* buffer, int offset, int length)
 {
-    JNIEnv* env = GetJNIEnv();
     /*
         appOutBuffer.put(message);
         doWrap();
     */
-    assert(0 && "not implemented yet");
-    return;
+    JNIEnv* env = GetJNIEnv();
+    jbyteArray data = (*env)->NewByteArray(env, length);
+    (*env)->SetByteArrayRegion(env, data, 0, length, (jbyte*)(buffer + offset));
+    (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->appOutBuffer, g_ByteBufferPut2Method, data));
+    (*env)->DeleteLocalRef(env, data);
+    doWrap(env, sslStream);
 }
 
 void AndroidCrypto_Dispose(SSLStream* sslStream)

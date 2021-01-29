@@ -144,6 +144,7 @@ extern jmethodID g_SSLEngineGetHandshakeStatusMethod;
 extern jclass    g_ByteBuffer;
 extern jmethodID g_ByteBufferAllocateMethod;
 extern jmethodID g_ByteBufferPutMethod;
+extern jmethodID g_ByteBufferPut2Method;
 extern jmethodID g_ByteBufferFlipMethod;
 extern jmethodID g_ByteBufferGetMethod;
 extern jmethodID g_ByteBufferLimitMethod;
