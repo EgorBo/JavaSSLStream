@@ -145,6 +145,7 @@ extern jclass    g_ByteBuffer;
 extern jmethodID g_ByteBufferAllocateMethod;
 extern jmethodID g_ByteBufferPutMethod;
 extern jmethodID g_ByteBufferPut2Method;
+extern jmethodID g_ByteBufferPut3Method;
 extern jmethodID g_ByteBufferFlipMethod;
 extern jmethodID g_ByteBufferGetMethod;
 extern jmethodID g_ByteBufferLimitMethod;
@@ -173,9 +174,19 @@ extern jmethodID g_SSLEngineResultGetHandshakeStatusMethod;
 // java/security/cert/X509Certificate
 extern jclass    g_X509Certificate;
 
-// javax/net/ssl/X509Certificate
+// javax/net/ssl/TrustManager
 extern jclass    g_TrustManager;
 
+// java/io/InputStream
+extern jclass    g_InputStream;
+extern jmethodID g_InputStreamReadMethod;
+
+// java/io/OutputStream
+extern jclass    g_OutputStream;
+extern jmethodID g_OutputStreamWriteMethod;
+
+extern jclass    g_TrustAllCerts;
+extern jmethodID g_TrustAllCertsCtor;
 
 // JNI helpers
 #define LOG_DEBUG(fmt, ...) ((void)__android_log_print(ANDROID_LOG_DEBUG, "DOTNET", "%s: " fmt, __FUNCTION__, ## __VA_ARGS__))
@@ -189,6 +200,7 @@ jobject AddGRef(JNIEnv *env, jobject gref);
 void ReleaseGRef(JNIEnv *env, jobject gref);
 jclass GetClassGRef(JNIEnv *env, const char* name);
 bool CheckJNIExceptions(JNIEnv* env);
+void AssertOnJNIExceptions(JNIEnv* env);
 jmethodID GetMethod(JNIEnv *env, bool isStatic, jclass klass, const char* name, const char* sig);
 jfieldID GetField(JNIEnv *env, bool isStatic, jclass klass, const char* name, const char* sig);
 JNIEnv* GetJNIEnv(void);

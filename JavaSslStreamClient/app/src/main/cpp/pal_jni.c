@@ -134,6 +134,7 @@ jclass    g_ByteBuffer;
 jmethodID g_ByteBufferAllocateMethod;
 jmethodID g_ByteBufferPutMethod;
 jmethodID g_ByteBufferPut2Method;
+jmethodID g_ByteBufferPut3Method;
 jmethodID g_ByteBufferFlipMethod;
 jmethodID g_ByteBufferGetMethod;
 jmethodID g_ByteBufferPutBufferMethod;
@@ -162,8 +163,20 @@ jmethodID g_SSLEngineResultGetHandshakeStatusMethod;
 // java/security/cert/X509Certificate
 jclass    g_X509Certificate;
 
-// javax/net/ssl/X509Certificate
+// javax/net/ssl/TrustManager
 jclass    g_TrustManager;
+
+// java/io/InputStream
+jclass    g_InputStream;
+jmethodID g_InputStreamReadMethod;
+
+// java/io/OutputStream
+jclass    g_OutputStream;
+jmethodID g_OutputStreamWriteMethod;
+
+
+jclass    g_TrustAllCerts;
+jmethodID g_TrustAllCertsCtor;
 
 jobject ToGRef(JNIEnv *env, jobject lref)
 {
@@ -206,6 +219,11 @@ bool CheckJNIExceptions(JNIEnv* env)
         return true;
     }
     return false;
+}
+
+void AssertOnJNIExceptions(JNIEnv* env)
+{
+    assert(!CheckJNIExceptions(env));
 }
 
 void SaveTo(uint8_t* src, uint8_t** dst, size_t len)
@@ -374,6 +392,7 @@ JNI_OnLoad(JavaVM *vm, void *reserved)
     g_ByteBufferAllocateMethod =          GetMethod(env, true,  g_ByteBuffer, "allocate", "(I)Ljava/nio/ByteBuffer;");
     g_ByteBufferPutMethod =               GetMethod(env, false, g_ByteBuffer, "put", "(Ljava/nio/ByteBuffer;)Ljava/nio/ByteBuffer;");
     g_ByteBufferPut2Method =              GetMethod(env, false, g_ByteBuffer, "put", "([B)Ljava/nio/ByteBuffer;");
+    g_ByteBufferPut3Method =              GetMethod(env, false, g_ByteBuffer, "put", "([BII)Ljava/nio/ByteBuffer;");
     g_ByteBufferFlipMethod =              GetMethod(env, false, g_ByteBuffer, "flip", "()Ljava/nio/Buffer;");
     g_ByteBufferLimitMethod =             GetMethod(env, false, g_ByteBuffer, "limit", "()I");
     g_ByteBufferGetMethod =               GetMethod(env, false, g_ByteBuffer, "get", "([B)Ljava/nio/ByteBuffer;");
@@ -396,7 +415,18 @@ JNI_OnLoad(JavaVM *vm, void *reserved)
     g_SSLEngineResultGetStatusMethod =           GetMethod(env, false, g_SSLEngineResult, "getStatus", "()Ljavax/net/ssl/SSLEngineResult$Status;");
     g_SSLEngineResultGetHandshakeStatusMethod =  GetMethod(env, false, g_SSLEngineResult, "getHandshakeStatus", "()Ljavax/net/ssl/SSLEngineResult$HandshakeStatus;");
 
-    g_X509Certificate = GetClassGRef(env, "java/security/cert/X509Certificate");
+    g_X509Certificate =         GetClassGRef(env, "java/security/cert/X509Certificate");
+
+    g_InputStream =             GetClassGRef(env, "java/io/InputStream");
+    g_InputStreamReadMethod =   GetMethod(env, false, g_InputStream, "read", "([B)I");
+
+    g_OutputStream =            GetClassGRef(env, "java/io/OutputStream");
+    g_OutputStreamWriteMethod = GetMethod(env, false, g_OutputStream, "write", "([B)V");
+
+    g_TrustAllCerts =           GetClassGRef(env, "com/example/javasslstreamclient/TrustAllCerts");
+    g_TrustAllCertsCtor =       GetMethod(env, false, g_TrustAllCerts, "<init>", "()V");
+
+    g_TrustManager = GetClassGRef(env, "javax/net/ssl/TrustManager");
 
     return JNI_VERSION_1_6;
 }

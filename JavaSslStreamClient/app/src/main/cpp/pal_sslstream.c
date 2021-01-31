@@ -143,13 +143,15 @@ void doWrap(JNIEnv* env, SSLStream* sslStream)
 void doUnwrap(JNIEnv* env, SSLStream* sslStream)
 {
     /*
-        if (netInBuffer.position() == 0) {
-            ReadableByteChannel channel = Channels.newChannel(inputStream);
-            int count = channel.read(netInBuffer);
+        if (netInBuffer.position() == 0)
+        {
+            byte[] tmp = new byte[netInBuffer.limit()];
+            int count = inputStream.read(tmp);
             if (count == -1) {
                 handleEndOfStream();
                 return;
             }
+            netInBuffer.put(tmp, 0, count);
         }
 
         netInBuffer.flip();
@@ -171,13 +173,6 @@ void doUnwrap(JNIEnv* env, SSLStream* sslStream)
                 break;
             case BUFFER_UNDERFLOW:
                 netInBuffer = ensureRemaining(netInBuffer, sslEngine.getSession().getPacketBufferSize());
-                ReadableByteChannel channel = Channels.newChannel(inputStream);
-                int count = channel.read(netInBuffer);
-                channel.close();
-                if (count == -1) {
-                    handleEndOfStream();
-                    return;
-                }
                 doUnwrap();
                 break;
             case BUFFER_OVERFLOW:
@@ -186,7 +181,47 @@ void doUnwrap(JNIEnv* env, SSLStream* sslStream)
                 break;
         }
     */
-    assert(0 && "not implemented yet");
+
+    if ((*env)->CallIntMethod(env, sslStream->netInBuffer, g_ByteBufferPositionMethod) == 0)
+    {
+        int netInBufferLimit = (*env)->CallIntMethod(env, sslStream->netInBuffer, g_ByteBufferLimitMethod);
+        jbyteArray tmp = (*env)->NewByteArray(env, netInBufferLimit);
+        uint8_t* tmpNative = malloc(netInBufferLimit);
+        int count = sslStream->streamReader(tmpNative, 0, netInBufferLimit);
+        if (count == -1)
+        {
+            handleEndOfStream(env, sslStream);
+            return;
+        }
+        (*env)->SetByteArrayRegion(env, tmp, 0, count, (jbyte*)(tmpNative));
+        (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->appOutBuffer, g_ByteBufferPut3Method, tmp, 0, count));
+        free(tmpNative);
+        (*env)->DeleteLocalRef(env, tmp);
+    }
+
+    (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->netInBuffer, g_ByteBufferFlipMethod));
+    jobject sslEngineResult = (*env)->CallObjectMethod(env, sslStream->sslEngine, g_SSLEngineUnwrapMethod, sslStream->netInBuffer, sslStream->appInBuffer);
+    (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->netInBuffer, g_ByteBufferCompactMethod));
+
+    int status = GetEnumAsInt(env, (*env)->CallObjectMethod(env, sslEngineResult, g_SSLEngineResultGetStatusMethod), true);
+    switch (status)
+    {
+        case STATUS__OK:
+            checkHandshakeStatus(env, sslStream, getHandshakeStatus(env, sslStream, sslEngineResult));
+            break;
+        case STATUS__CLOSED:
+            checkHandshakeStatus(env, sslStream, getHandshakeStatus(env, sslStream, sslEngineResult));
+            close(env, sslStream);
+            break;
+        case STATUS__BUFFER_UNDERFLOW:
+            sslStream->netInBuffer = ensureRemaining(env, sslStream, sslStream->netInBuffer, (*env)->CallIntMethod(env, sslStream->sslSession, g_SSLSessionGetPacketBufferSizeMethod));
+            doUnwrap(env, sslStream);
+            break;
+        case STATUS__BUFFER_OVERFLOW:
+            sslStream->appInBuffer = ensureRemaining(env, sslStream, sslStream->appInBuffer, (*env)->CallIntMethod(env, sslStream->sslSession, g_SSLSessionGetApplicationBufferSizeMethod));
+            doUnwrap(env, sslStream);
+            break;
+    }
 }
 
 void checkHandshakeStatus(JNIEnv* env, SSLStream* sslStream, int handshakeStatus)
@@ -251,8 +286,11 @@ SSLStream* AndroidCrypto_CreateSSLStreamAndStartHandshake(STREAM_READER streamRe
 
     sslStream->sslContext = ToGRef(env, (*env)->CallStaticObjectMethod(env, g_SSLContext, g_SSLContextGetInstanceMethod, tlsVerStr));
 
+    jobject trustAllCertsObj = (*env)->NewObject(env, g_TrustAllCerts, g_TrustAllCertsCtor);
+    jobject certManagersArray = (*env)->NewObjectArray(env, 1, g_TrustManager, trustAllCertsObj);
+
     // TODO: set TrustManager[] argument.
-    (*env)->CallVoidMethod(env, sslStream->sslContext, g_SSLContextInitMethod, NULL, NULL, NULL);
+    (*env)->CallVoidMethod(env, sslStream->sslContext, g_SSLContextInitMethod, NULL, certManagersArray, NULL);
     sslStream->sslEngine  = ToGRef(env, (*env)->CallObjectMethod(env, sslStream->sslContext, g_SSLContextCreateSSLEngineMethod));
     sslStream->sslSession = ToGRef(env, (*env)->CallObjectMethod(env, sslStream->sslEngine, g_SSLEngineGetSessionMethod));
 
@@ -272,6 +310,8 @@ SSLStream* AndroidCrypto_CreateSSLStreamAndStartHandshake(STREAM_READER streamRe
     (*env)->CallVoidMethod(env, sslStream->sslEngine, g_SSLEngineBeginHandshakeMethod);
 
     checkHandshakeStatus(env, sslStream, getHandshakeStatus(env, sslStream, NULL));
+
+    AssertOnJNIExceptions(env);
 
     (*env)->DeleteLocalRef(env, tlsVerStr);
     return sslStream;

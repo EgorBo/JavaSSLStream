@@ -34,23 +34,8 @@ public final class SSLStream {
     public void AuthenticateAsClient(int appOutBufferSize, int appInBufferSize)
             throws IOException, NoSuchAlgorithmException, KeyManagementException {
 
-
-        TrustManager trustAllCerts = new X509TrustManager()
-        {
-            public java.security.cert.X509Certificate[] getAcceptedIssuers()
-            {
-                return new X509Certificate[0];
-            }
-            public void checkClientTrusted(X509Certificate[] certs, String authType)
-            {
-            }
-            public void checkServerTrusted(X509Certificate[] certs, String authType)
-            {
-            }
-        };
-
         SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
-        sslContext.init(null, new TrustManager[]{trustAllCerts}, null);
+        sslContext.init(null, new TrustManager[]{ new TrustAllCerts() }, null);
 
         this.sslEngine = sslContext.createSSLEngine();
         this.sslEngine.setUseClientMode(true);
