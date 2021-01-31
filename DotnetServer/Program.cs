@@ -14,13 +14,14 @@ public sealed class SslTcpServer
     {
         if (certificate == null)
         {
+            // YOLO: use some random existing certificate 
             X509Store store = new X509Store(StoreLocation.CurrentUser);
             store.Open(OpenFlags.OpenExistingOnly);
             _serverCertificate = store.Certificates[0];
         }
         else
         {
-            // load certificate from file
+            // TODO: load certificate from file
         }
 
         TcpListener listener = new TcpListener(IPAddress.Any, 8080);
