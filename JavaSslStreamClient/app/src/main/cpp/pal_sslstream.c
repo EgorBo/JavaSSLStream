@@ -4,6 +4,7 @@ void checkHandshakeStatus(JNIEnv* env, SSLStream* sslStream, int handshakeStatus
 
 int getHandshakeStatus(JNIEnv* env, SSLStream* sslStream, jobject engineResult)
 {
+    LOG_INFO("getHandshakeStatus");
     if (engineResult)
         return GetEnumAsInt(env, (*env)->CallObjectMethod(env, engineResult, g_SSLEngineResultGetHandshakeStatusMethod), true);
     else
@@ -15,6 +16,7 @@ void close(JNIEnv* env, SSLStream* sslStream) {
         sslEngine.closeOutbound();
         checkHandshakeStatus();
     */
+    LOG_INFO("close");
     (*env)->CallVoidMethod(env, sslStream->sslEngine, g_SSLEngineCloseOutboundMethod);
     checkHandshakeStatus(env, sslStream, getHandshakeStatus(env, sslStream, NULL));
 }
@@ -24,19 +26,22 @@ void handleEndOfStream(JNIEnv* env, SSLStream* sslStream)  {
         sslEngine.closeInbound();
         close();
     */
+    LOG_INFO("handleEndOfStream");
     (*env)->CallVoidMethod(env, sslStream->sslEngine, g_SSLEngineCloseInboundMethod);
     close(env, sslStream);
 }
 
 void flush(JNIEnv* env, SSLStream* sslStream)
 {
+    AssertOnJNIExceptions(env);
     /*
         netOutBuffer.flip();
         byte[] data = new byte[netOutBuffer.limit()];
         netOutBuffer.get(data);
-        outputStream.write(data, 0, data.length); // in JNI we write to "streamWriter" function pointer.
+        WriteToOutputStream(data, 0, data.length);
         netOutBuffer.compact();
     */
+    LOG_INFO("flush");
 
     // DeleteLocalRef because we don't need the return value (Buffer)
     (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->netOutBuffer, g_ByteBufferFlipMethod));
@@ -66,6 +71,7 @@ jobject ensureRemaining(JNIEnv* env, SSLStream* sslStream, jobject oldBuffer, in
             return oldBuffer;
         }
     */
+    LOG_INFO("ensureRemaining");
 
     int oldRemaining = (*env)->CallIntMethod(env, oldBuffer, g_ByteBufferRemainingMethod);
     if (oldRemaining < newRemaining)
@@ -114,6 +120,7 @@ void doWrap(JNIEnv* env, SSLStream* sslStream)
                 break;
         }
     */
+    LOG_INFO("doWrap");
 
     (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->appOutBuffer, g_ByteBufferFlipMethod));
     jobject sslEngineResult = (*env)->CallObjectMethod(env, sslStream->sslEngine, g_SSLEngineWrapMethod, sslStream->appOutBuffer, sslStream->netOutBuffer);
@@ -181,6 +188,7 @@ void doUnwrap(JNIEnv* env, SSLStream* sslStream)
                 break;
         }
     */
+    LOG_INFO("doUnwrap");
 
     if ((*env)->CallIntMethod(env, sslStream->netInBuffer, g_ByteBufferPositionMethod) == 0)
     {
@@ -226,6 +234,7 @@ void doUnwrap(JNIEnv* env, SSLStream* sslStream)
 
 void checkHandshakeStatus(JNIEnv* env, SSLStream* sslStream, int handshakeStatus)
 {
+    LOG_INFO("checkHandshakeStatus");
     /*
         switch (handshakeStatus) {
             case NEED_WRAP:

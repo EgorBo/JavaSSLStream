@@ -1,5 +1,7 @@
 package com.example.javasslstreamclient;
 
+import android.util.Log;
+
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -44,8 +46,8 @@ public final class SSLStream {
         final int packetBufferSize = sslSession.getPacketBufferSize();
         this.appOutBuffer = ByteBuffer.allocate(appOutBufferSize);
         this.netOutBuffer = ByteBuffer.allocate(packetBufferSize);
-        this.netInBuffer = ByteBuffer.allocate(packetBufferSize);
-        this.appInBuffer = ByteBuffer.allocate(Math.max(applicationBufferSize, appInBufferSize));
+        this.netInBuffer =  ByteBuffer.allocate(packetBufferSize);
+        this.appInBuffer =  ByteBuffer.allocate(Math.max(applicationBufferSize, appInBufferSize));
         sslEngine.beginHandshake();
         checkHandshakeStatus();
     }
@@ -124,11 +126,23 @@ public final class SSLStream {
         }
     }
 
+    void WriteToOutputStream(byte[] data, int offset, int length) throws IOException {
+        Log.i("EGOR", "WriteToOutputStream offset=" + offset + ", length=" + length);
+        outputStream.write(data, offset, length);
+    }
+
+    int ReadFromInputStream(byte[] data, int offset, int length) throws IOException {
+        Log.i("EGOR", "ReadFromInputStream offset=" + offset + ", length=" + length);
+        int read = inputStream.read(data, offset, length);
+        Log.i("EGOR", "ReadFromInputStream read=" + read);
+        return read;
+    }
+
     private void flush() throws IOException {
         netOutBuffer.flip();
         byte[] data = new byte[netOutBuffer.limit()];
         netOutBuffer.get(data);
-        outputStream.write(data, 0, data.length);
+        WriteToOutputStream(data, 0, data.length);
         netOutBuffer.compact();
     }
 
@@ -136,7 +150,8 @@ public final class SSLStream {
         if (netInBuffer.position() == 0)
         {
             byte[] tmp = new byte[netInBuffer.limit()];
-            int count = inputStream.read(tmp);
+
+            int count = ReadFromInputStream(tmp, 0, tmp.length);
             if (count == -1) {
                 handleEndOfStream();
                 return;

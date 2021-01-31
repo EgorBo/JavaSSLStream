@@ -7,7 +7,9 @@ jobject outputStreamGref;
 
 void onInnerStreamWrite(uint8_t* data, uint32_t offset, uint32_t length)
 {
+    LOG_INFO("onInnerStreamWrite: offset=%d, length=%d", offset, length);
     JNIEnv* env = GetJNIEnv();
+    AssertOnJNIExceptions(env);
     jbyteArray tmpArray = (*env)->NewByteArray(env, length);
     (*env)->SetByteArrayRegion(env, tmpArray, 0, length, (jbyte*)(data + offset));
     (*env)->CallVoidMethod(env, outputStreamGref, g_OutputStreamWriteMethod, tmpArray);
@@ -16,9 +18,12 @@ void onInnerStreamWrite(uint8_t* data, uint32_t offset, uint32_t length)
 
 int onInnerStreamRead(uint8_t* data, uint32_t offset, uint32_t length)
 {
+    LOG_INFO("onInnerStreamRead: offset=%d, length=%d", offset, length);
     JNIEnv* env = GetJNIEnv();
+    AssertOnJNIExceptions(env);
     jbyteArray tmpArray = (*env)->NewByteArray(env, length);
     int read = (*env)->CallIntMethod(env, inputStreamGref, g_InputStreamReadMethod, tmpArray);
+    LOG_INFO("onInnerStreamRead: read=%d", read);
     (*env)->GetByteArrayRegion(env, tmpArray, 0, read, (jbyte*) (data + offset));
     (*env)->DeleteLocalRef(env, tmpArray);
     return read;
