@@ -11,10 +11,11 @@ public class SslTcpClient
     public static bool ValidateServerCertificate(
             object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
     {
-        if (sslPolicyErrors == SslPolicyErrors.None) return true;
-        Console.WriteLine("Certificate error: {0}", sslPolicyErrors);
+        if (sslPolicyErrors == SslPolicyErrors.None)
+            return true;
 
-        // Ignore errors (our random server cert is too random :\)
+        Console.WriteLine("Certificate error: {0}", sslPolicyErrors);
+        // Ignore errors (our random server's cert is too random :\)
         return true;
     }
 
@@ -32,10 +33,9 @@ public class SslTcpClient
             // Receive  ServerHello  5    bytes
             // Receive  Certificate  1248 bytes
             // Send     ...          158  bytes
-            // Receive  ...          5    bytes
-            // Receive  ...          1    bytes
-            // Receive  ...          5    bytes
-            // Receive  ...          40   bytes
+            // Receive  ...          51   bytes
+            
+            // NOTE: serverName here is useless?
             sslStream.AuthenticateAsClient(serverName, null, SslProtocols.Tls12, false);
             Console.WriteLine("----------------------- [auth completed] -------------------");
         }
