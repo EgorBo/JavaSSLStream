@@ -4,11 +4,14 @@ void checkHandshakeStatus(JNIEnv* env, SSLStream* sslStream, int handshakeStatus
 
 int getHandshakeStatus(JNIEnv* env, SSLStream* sslStream, jobject engineResult)
 {
-    LOG_INFO("getHandshakeStatus");
+    AssertOnJNIExceptions(env);
+    int status = -1;
     if (engineResult)
-        return GetEnumAsInt(env, (*env)->CallObjectMethod(env, engineResult, g_SSLEngineResultGetHandshakeStatusMethod), true);
+        status = GetEnumAsInt(env, (*env)->CallObjectMethod(env, engineResult, g_SSLEngineResultGetHandshakeStatusMethod), true);
     else
-        return GetEnumAsInt(env, (*env)->CallObjectMethod(env, sslStream->sslEngine, g_SSLEngineGetHandshakeStatusMethod), true);
+        status = GetEnumAsInt(env, (*env)->CallObjectMethod(env, sslStream->sslEngine, g_SSLEngineGetHandshakeStatusMethod), true);
+    AssertOnJNIExceptions(env);
+    return status;
 }
 
 void close(JNIEnv* env, SSLStream* sslStream) {
@@ -16,7 +19,7 @@ void close(JNIEnv* env, SSLStream* sslStream) {
         sslEngine.closeOutbound();
         checkHandshakeStatus();
     */
-    LOG_INFO("close");
+    AssertOnJNIExceptions(env);
     (*env)->CallVoidMethod(env, sslStream->sslEngine, g_SSLEngineCloseOutboundMethod);
     checkHandshakeStatus(env, sslStream, getHandshakeStatus(env, sslStream, NULL));
 }
@@ -26,14 +29,14 @@ void handleEndOfStream(JNIEnv* env, SSLStream* sslStream)  {
         sslEngine.closeInbound();
         close();
     */
-    LOG_INFO("handleEndOfStream");
+    AssertOnJNIExceptions(env);
     (*env)->CallVoidMethod(env, sslStream->sslEngine, g_SSLEngineCloseInboundMethod);
     close(env, sslStream);
+    AssertOnJNIExceptions(env);
 }
 
 void flush(JNIEnv* env, SSLStream* sslStream)
 {
-    AssertOnJNIExceptions(env);
     /*
         netOutBuffer.flip();
         byte[] data = new byte[netOutBuffer.limit()];
@@ -41,7 +44,8 @@ void flush(JNIEnv* env, SSLStream* sslStream)
         WriteToOutputStream(data, 0, data.length);
         netOutBuffer.compact();
     */
-    LOG_INFO("flush");
+
+    AssertOnJNIExceptions(env);
 
     // DeleteLocalRef because we don't need the return value (Buffer)
     (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->netOutBuffer, g_ByteBufferFlipMethod));
@@ -57,6 +61,7 @@ void flush(JNIEnv* env, SSLStream* sslStream)
     free(dataPtr);
     // DeleteLocalRef because we don't need the return value (Buffer)
     (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->netOutBuffer, g_ByteBufferCompactMethod));
+    AssertOnJNIExceptions(env);
 }
 
 jobject ensureRemaining(JNIEnv* env, SSLStream* sslStream, jobject oldBuffer, int newRemaining)
@@ -71,13 +76,14 @@ jobject ensureRemaining(JNIEnv* env, SSLStream* sslStream, jobject oldBuffer, in
             return oldBuffer;
         }
     */
-    LOG_INFO("ensureRemaining");
+
+    AssertOnJNIExceptions(env);
 
     int oldRemaining = (*env)->CallIntMethod(env, oldBuffer, g_ByteBufferRemainingMethod);
     if (oldRemaining < newRemaining)
     {
         // DeleteLocalRef because we don't need the return value (Buffer)
-        (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->netOutBuffer, g_ByteBufferFlipMethod));
+        (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, oldBuffer, g_ByteBufferFlipMethod));
         jobject newBuffer = ToGRef(env, (*env)->CallStaticObjectMethod(env, g_ByteBuffer, g_ByteBufferAllocateMethod, oldRemaining + newRemaining));
         // DeleteLocalRef because we don't need the return value (Buffer)
         (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, newBuffer, g_ByteBufferPutBufferMethod, oldBuffer));
@@ -120,7 +126,7 @@ void doWrap(JNIEnv* env, SSLStream* sslStream)
                 break;
         }
     */
-    LOG_INFO("doWrap");
+    AssertOnJNIExceptions(env);
 
     (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->appOutBuffer, g_ByteBufferFlipMethod));
     jobject sslEngineResult = (*env)->CallObjectMethod(env, sslStream->sslEngine, g_SSLEngineWrapMethod, sslStream->appOutBuffer, sslStream->netOutBuffer);
@@ -153,7 +159,8 @@ void doUnwrap(JNIEnv* env, SSLStream* sslStream)
         if (netInBuffer.position() == 0)
         {
             byte[] tmp = new byte[netInBuffer.limit()];
-            int count = inputStream.read(tmp);
+
+            int count = ReadFromInputStream(tmp, 0, tmp.length);
             if (count == -1) {
                 handleEndOfStream();
                 return;
@@ -188,7 +195,7 @@ void doUnwrap(JNIEnv* env, SSLStream* sslStream)
                 break;
         }
     */
-    LOG_INFO("doUnwrap");
+    AssertOnJNIExceptions(env);
 
     if ((*env)->CallIntMethod(env, sslStream->netInBuffer, g_ByteBufferPositionMethod) == 0)
     {
@@ -202,7 +209,7 @@ void doUnwrap(JNIEnv* env, SSLStream* sslStream)
             return;
         }
         (*env)->SetByteArrayRegion(env, tmp, 0, count, (jbyte*)(tmpNative));
-        (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->appOutBuffer, g_ByteBufferPut3Method, tmp, 0, count));
+        (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->netInBuffer, g_ByteBufferPut3Method, tmp, 0, count));
         free(tmpNative);
         (*env)->DeleteLocalRef(env, tmp);
     }
@@ -234,7 +241,6 @@ void doUnwrap(JNIEnv* env, SSLStream* sslStream)
 
 void checkHandshakeStatus(JNIEnv* env, SSLStream* sslStream, int handshakeStatus)
 {
-    LOG_INFO("checkHandshakeStatus");
     /*
         switch (handshakeStatus) {
             case NEED_WRAP:
@@ -251,6 +257,7 @@ void checkHandshakeStatus(JNIEnv* env, SSLStream* sslStream, int handshakeStatus
         }
     */
 
+    AssertOnJNIExceptions(env);
     switch (handshakeStatus)
     {
         case HANDSHAKE_STATUS__NEED_WRAP:
@@ -310,19 +317,18 @@ SSLStream* AndroidCrypto_CreateSSLStreamAndStartHandshake(STREAM_READER streamRe
 
     sslStream->appOutBuffer = ToGRef(env, (*env)->CallStaticObjectMethod(env, g_ByteBuffer, g_ByteBufferAllocateMethod, appOutBufferSize));
     sslStream->netOutBuffer = ToGRef(env, (*env)->CallStaticObjectMethod(env, g_ByteBuffer, g_ByteBufferAllocateMethod, packetBufferSize));
-    sslStream->appInBuffer = ToGRef(env, (*env)->CallStaticObjectMethod(env, g_ByteBuffer, g_ByteBufferAllocateMethod,
+    sslStream->appInBuffer =  ToGRef(env, (*env)->CallStaticObjectMethod(env, g_ByteBuffer, g_ByteBufferAllocateMethod,
             applicationBufferSize > appInBufferSize ? applicationBufferSize : appInBufferSize));
-    sslStream->netInBuffer = ToGRef(env, (*env)->CallStaticObjectMethod(env, g_ByteBuffer, g_ByteBufferAllocateMethod, packetBufferSize));
+    sslStream->netInBuffer =  ToGRef(env, (*env)->CallStaticObjectMethod(env, g_ByteBuffer, g_ByteBufferAllocateMethod, packetBufferSize));
+
     sslStream->streamReader = streamReader;
     sslStream->streamWriter = streamWriter;
 
     (*env)->CallVoidMethod(env, sslStream->sslEngine, g_SSLEngineBeginHandshakeMethod);
 
     checkHandshakeStatus(env, sslStream, getHandshakeStatus(env, sslStream, NULL));
-
-    AssertOnJNIExceptions(env);
-
     (*env)->DeleteLocalRef(env, tlsVerStr);
+    AssertOnJNIExceptions(env);
     return sslStream;
 }
 
@@ -330,32 +336,39 @@ int AndroidCrypto_SSLStreamRead(SSLStream* sslStream, uint8_t* buffer, int offse
 {
     JNIEnv* env = GetJNIEnv();
 
-    // appInBuffer.flip();
-    // int rem = appInBuffer.remaining();
-    // if (rem> 0) {
-    //     byte[] data = new byte[rem];
-    //     appInBuffer.get(data);
-    //     appInBuffer.compact();
-    // } else {
-    //     appInBuffer.compact();
-    //     doUnwrap();
-    // }
+    /*
+        while (true) {
+            appInBuffer.flip();
+            try {
+                if (appInBuffer.remaining() > 0) {
+                    byte[] data = new byte[appInBuffer.remaining()];
+                    appInBuffer.get(data);
+                    return data;
+                }
+            } finally {
+                appInBuffer.compact();
+            }
+            doUnwrap();
+        }
+    */
 
-    (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->netOutBuffer, g_ByteBufferFlipMethod));
+    AssertOnJNIExceptions(env);
+    (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->appInBuffer, g_ByteBufferFlipMethod));
     int rem = (*env)->CallIntMethod(env, sslStream->appInBuffer, g_ByteBufferRemainingMethod);
     if (rem > 0)
     {
         jbyteArray data = (*env)->NewByteArray(env, rem);
-        (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->appOutBuffer, g_ByteBufferGetMethod, data));
-        (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->netOutBuffer, g_ByteBufferCompactMethod));
-
-        //TODO: (*env)->GetByteArrayRegion(env, data, 0, bufferLimit, (jbyte*) dataPtr);
+        (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->appInBuffer, g_ByteBufferGetMethod, data));
+        (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->appInBuffer, g_ByteBufferCompactMethod));
+        (*env)->GetByteArrayRegion(env, data, 0, rem, (jbyte*) buffer);
+        AssertOnJNIExceptions(env);
         return rem;
     }
     else
     {
-        (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->netOutBuffer, g_ByteBufferCompactMethod));
+        (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->appInBuffer, g_ByteBufferCompactMethod));
         doUnwrap(env, sslStream);
+        AssertOnJNIExceptions(env);
         return AndroidCrypto_SSLStreamRead(sslStream, buffer, offset, length);
     }
 }
@@ -372,6 +385,7 @@ void AndroidCrypto_SSLStreamWrite(SSLStream* sslStream, uint8_t* buffer, int off
     (*env)->DeleteLocalRef(env, (*env)->CallObjectMethod(env, sslStream->appOutBuffer, g_ByteBufferPut2Method, data));
     (*env)->DeleteLocalRef(env, data);
     doWrap(env, sslStream);
+    AssertOnJNIExceptions(env);
 }
 
 void AndroidCrypto_Dispose(SSLStream* sslStream)
@@ -385,4 +399,5 @@ void AndroidCrypto_Dispose(SSLStream* sslStream)
     ReleaseGRef(env, sslStream->netInBuffer);
     ReleaseGRef(env, sslStream->appInBuffer);
     free(sslStream);
+    AssertOnJNIExceptions(env);
 }

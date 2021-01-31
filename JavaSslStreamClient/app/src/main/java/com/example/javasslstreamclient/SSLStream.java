@@ -210,6 +210,4 @@ public final class SSLStream {
             return oldBuffer;
         }
     }
-
-
 }

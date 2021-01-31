@@ -33,31 +33,31 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     // NOTE: works only on a real device for me (connected to the same network/wi-fi as the C# server)
                     Socket socket = new Socket("192.168.0.5", 8080);
+                    boolean javaImpl = false; // set to true to use JAVA impl instead of JNI
 
-                    boolean javaImpl = true;
-
+                    String serverResponse = "";
                     if (javaImpl) {
                         SSLStream sslStream = new SSLStream(socket.getOutputStream(), socket.getInputStream());
                         sslStream.AuthenticateAsClient(socket.getSendBufferSize(), socket.getReceiveBufferSize());
-
-                        // now let's send & wait some app data
                         sslStream.send("EgorBo<EOF>".getBytes("UTF-8"));
                         byte[] serverResponseUtf8 = sslStream.receive();
-                        final String serverMessage = new String(serverResponseUtf8, "UTF-8");
+                        serverResponse = new String(serverResponseUtf8, "UTF-8");
 
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                TextView tv = findViewById(R.id.sample_text);
-                                tv.setText(serverMessage);
-                            }
-                        });
-                        Log.i("EGOR", "server: " + serverMessage);
                     } else {
-                        // Same, but via JNI (not finished yet)
-                        Object object = SSLStreamNative(socket.getInputStream(), socket.getOutputStream());
-                        Log.i("EGOR", "server: " + object);
+                        // Same, but via JNI
+                        serverResponse = SSLStreamNative(socket.getSendBufferSize(), socket.getReceiveBufferSize(), socket.getInputStream(), socket.getOutputStream());
                     }
+
+                    Log.i("EGOR", "server: " + serverResponse + ", using JNI? " + !javaImpl);
+                    // print server response on UI
+                    final String serverMsg = serverResponse;
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            TextView tv = findViewById(R.id.sample_text);
+                            tv.setText(serverMsg);
+                        }
+                    });
                 } catch (Exception exc) {
                     exc.printStackTrace();
                 }
@@ -65,5 +65,5 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
-    public native Object SSLStreamNative(InputStream inputStream, OutputStream outputStream);
+    public native String SSLStreamNative(int sendBufferSize, int receiveBufferSize, InputStream inputStream, OutputStream outputStream);
 }
