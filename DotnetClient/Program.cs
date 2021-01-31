@@ -36,6 +36,7 @@ public class SslTcpClient
             // Receive  ...          51   bytes
             
             // NOTE: serverName here is useless?
+            // NOTE: I use TSL1.2 here because my Galaxy S8+ doesn't support TLS1.3
             sslStream.AuthenticateAsClient(serverName, null, SslProtocols.Tls12, false);
             Console.WriteLine("----------------------- [auth completed] -------------------");
         }
