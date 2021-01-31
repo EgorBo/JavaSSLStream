@@ -14,7 +14,7 @@ public class SslTcpClient
         if (sslPolicyErrors == SslPolicyErrors.None) return true;
         Console.WriteLine("Certificate error: {0}", sslPolicyErrors);
 
-        // Ignore errors
+        // Ignore errors (our random server cert is too random :\)
         return true;
     }
 
@@ -36,8 +36,6 @@ public class SslTcpClient
             // Receive  ...          1    bytes
             // Receive  ...          5    bytes
             // Receive  ...          40   bytes
-
-            // See TLS1.2 scheme
             sslStream.AuthenticateAsClient(serverName, null, SslProtocols.Tls12, false);
             Console.WriteLine("----------------------- [auth completed] -------------------");
         }
