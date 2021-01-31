@@ -5,6 +5,7 @@ import java.security.cert.X509Certificate;
 
 import javax.net.ssl.X509TrustManager;
 
+// NOTE: no idea how to define custom implementations in JNI btw.
 public class TrustAllCerts implements X509TrustManager {
     @Override
     public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
