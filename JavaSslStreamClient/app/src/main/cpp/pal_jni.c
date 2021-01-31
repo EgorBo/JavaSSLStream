@@ -142,7 +142,6 @@ jmethodID g_ByteBufferLimitMethod;
 jmethodID g_ByteBufferRemainingMethod;
 jmethodID g_ByteBufferCompactMethod;
 jmethodID g_ByteBufferPositionMethod;
-jmethodID g_ByteBufferHasRemainingMethod;
 
 // javax/net/ssl/SSLContext
 jclass    g_SSLContext;
@@ -400,7 +399,6 @@ JNI_OnLoad(JavaVM *vm, void *reserved)
     g_ByteBufferRemainingMethod =         GetMethod(env, false, g_ByteBuffer, "remaining", "()I");
     g_ByteBufferCompactMethod =           GetMethod(env, false, g_ByteBuffer, "compact", "()Ljava/nio/ByteBuffer;");
     g_ByteBufferPositionMethod =          GetMethod(env, false, g_ByteBuffer, "position", "()I");
-    g_ByteBufferHasRemainingMethod =      GetMethod(env, false, g_ByteBuffer, "hasRemaining", "()Z");
 
     g_SSLContext =                        GetClassGRef(env, "javax/net/ssl/SSLContext");
     g_SSLContextGetInstanceMethod =       GetMethod(env, true,  g_SSLContext, "getInstance", "(Ljava/lang/String;)Ljavax/net/ssl/SSLContext;");

@@ -153,7 +153,6 @@ extern jmethodID g_ByteBufferRemainingMethod;
 extern jmethodID g_ByteBufferPutBufferMethod;
 extern jmethodID g_ByteBufferCompactMethod;
 extern jmethodID g_ByteBufferPositionMethod;
-extern jmethodID g_ByteBufferHasRemainingMethod;
 
 // javax/net/ssl/SSLContext
 extern jclass    g_SSLContext;
